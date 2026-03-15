@@ -1057,6 +1057,16 @@ export const StoreTab = ({ user }: any) => {
             order: 2,
             popular: true,
             cta: "Mais Vendido"
+          },
+          {
+            id: 'default-3',
+            name: "Plano Business",
+            price: 497,
+            numericPrice: 497,
+            features: ["Tudo do Plano Profissional", "Domínio Próprio (.com.br)", "Consultoria de SEO", "2 Cartões NFC Inclusos", "Gestão de Leads no Painel"],
+            active: true,
+            order: 3,
+            cta: "Falar com Consultor"
           }
         ]);
       } catch (error) {
@@ -1082,6 +1092,16 @@ export const StoreTab = ({ user }: any) => {
             order: 2,
             popular: true,
             cta: "Mais Vendido"
+          },
+          {
+            id: 'default-3',
+            name: "Plano Business",
+            price: 497,
+            numericPrice: 497,
+            features: ["Tudo do Plano Profissional", "Domínio Próprio (.com.br)", "Consultoria de SEO", "2 Cartões NFC Inclusos", "Gestão de Leads no Painel"],
+            active: true,
+            order: 3,
+            cta: "Falar com Consultor"
           }
         ]);
       } finally {
@@ -1107,8 +1127,7 @@ export const StoreTab = ({ user }: any) => {
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Seu painel está quase pronto!</h2>
         <p className="text-slate-600">Adquira um de nossos planos abaixo para liberar todas as funcionalidades e começar a usar seu card profissional.</p>
       </div>
-
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid lg:grid-cols-3 md:grid-cols-2 gap-6">
         {plans.map((plan) => (
           <div key={plan.id} className={`p-8 rounded-3xl border ${plan.popular ? 'border-vialinks-purple ring-2 ring-vialinks-purple/20 bg-white' : 'border-slate-100 bg-slate-50'} flex flex-col`}>
              <h3 className="text-xl font-bold text-slate-900 mb-2">{plan.name}</h3>
