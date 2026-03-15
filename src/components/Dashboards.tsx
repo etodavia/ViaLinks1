@@ -446,7 +446,12 @@ export const DashboardLayout = ({ user, setView, onLogout }: any) => {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setHasActiveOrders(!snapshot.empty);
+      const active = !snapshot.empty;
+      setHasActiveOrders(active);
+      // Force store tab if no orders
+      if (!active) {
+        setActiveTab('store');
+      }
     });
 
     return () => unsubscribe();
@@ -488,14 +493,16 @@ export const DashboardLayout = ({ user, setView, onLogout }: any) => {
 
             <nav className="flex flex-col gap-2">
               <button 
-                onClick={() => setActiveTab('overview')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'overview' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                onClick={() => (hasActiveOrders || user.role === 'admin') && setActiveTab('overview')}
+                disabled={!hasActiveOrders && user.role !== 'admin'}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'overview' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'} ${(!hasActiveOrders && user.role !== 'admin') ? 'opacity-30 cursor-not-allowed' : ''}`}
               >
                 <LayoutDashboard className="w-5 h-5" /> Visão Geral
               </button>
               <button 
-                onClick={() => setActiveTab('briefing')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'briefing' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                onClick={() => (hasActiveOrders || user.role === 'admin') && setActiveTab('briefing')}
+                disabled={!hasActiveOrders && user.role !== 'admin'}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'briefing' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'} ${(!hasActiveOrders && user.role !== 'admin') ? 'opacity-30 cursor-not-allowed' : ''}`}
               >
                 <ClipboardList className="w-5 h-5" /> Formulário Briefing
               </button>
@@ -503,11 +510,12 @@ export const DashboardLayout = ({ user, setView, onLogout }: any) => {
                 onClick={() => setActiveTab('orders')}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'orders' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
               >
-                <ShoppingBag className="w-5 h-5" /> Meus Pedidos
+                <ShoppingBag className="w-5 h-5" /> {(!hasActiveOrders && user.role !== 'admin') ? 'Planos e Preços' : 'Meus Pedidos'}
               </button>
               <button 
-                onClick={() => setActiveTab('delivery')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'delivery' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                onClick={() => (hasActiveOrders || user.role === 'admin') && setActiveTab('delivery')}
+                disabled={!hasActiveOrders && user.role !== 'admin'}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'delivery' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'} ${(!hasActiveOrders && user.role !== 'admin') ? 'opacity-30 cursor-not-allowed' : ''}`}
               >
                 <Package className="w-5 h-5" /> Entrega e Card
               </button>
@@ -520,8 +528,9 @@ export const DashboardLayout = ({ user, setView, onLogout }: any) => {
                 </button>
               )}
               <button 
-                onClick={() => setActiveTab('config')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'config' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                onClick={() => (hasActiveOrders || user.role === 'admin') && setActiveTab('config')}
+                disabled={!hasActiveOrders && user.role !== 'admin'}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'config' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'} ${(!hasActiveOrders && user.role !== 'admin') ? 'opacity-30 cursor-not-allowed' : ''}`}
               >
                 <Settings className="w-5 h-5" /> Configurações
               </button>
@@ -614,6 +623,7 @@ export const DashboardLayout = ({ user, setView, onLogout }: any) => {
             {activeTab === 'delivery' && <DeliverySection user={user} />}
             {activeTab === 'testimonial' && (hasActiveOrders || user.role === 'admin') && <TestimonialForm user={user} />}
             {activeTab === 'config' && <AccountSettings user={user} setView={setView} />}
+            {activeTab === 'store' && <StoreTab user={user} />}
           </div>
         </div>
       </div>
@@ -1008,6 +1018,118 @@ const DeliverySection = ({ user }: any) => {
             )}
           </div>
         </div>
+      </div>
+    </div>
+  );
+};
+
+export const StoreTab = ({ user }: any) => {
+  const [plans, setPlans] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const response = await fetch('/api/plans');
+        if (!response.ok) throw new Error("Falha ao carregar planos");
+        const plansData = await response.json();
+        const activePlans = plansData
+          .filter((p: any) => p.active !== false)
+          .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+        setPlans(activePlans.length > 0 ? activePlans : [
+          {
+            id: 'default-1',
+            name: "Plano Start",
+            price: 97,
+            numericPrice: 97,
+            features: ["Card Digital Personalizado", "Link na Bio Profissional", "Suporte via E-mail", "Atualizações Ilimitadas"],
+            active: true,
+            order: 1,
+            cta: "Começar Agora"
+          },
+          {
+            id: 'default-2',
+            name: "Plano Profissional + NFC",
+            price: 297,
+            numericPrice: 297,
+            features: ["Tudo do Plano Start", "Cartão Físico NFC Incluso", "Envio Grátis para todo Brasil", "PDF Interativo de Bônus", "Suporte Prioritário WhatsApp"],
+            active: true,
+            order: 2,
+            popular: true,
+            cta: "Mais Vendido"
+          }
+        ]);
+      } catch (error) {
+        console.warn("Pricing fetch failed, using defaults");
+        setPlans([
+          {
+            id: 'default-1',
+            name: "Plano Start",
+            price: 97,
+            numericPrice: 97,
+            features: ["Card Digital Personalizado", "Link na Bio Profissional", "Suporte via E-mail", "Atualizações Ilimitadas"],
+            active: true,
+            order: 1,
+            cta: "Começar Agora"
+          },
+          {
+            id: 'default-2',
+            name: "Plano Profissional + NFC",
+            price: 297,
+            numericPrice: 297,
+            features: ["Tudo do Plano Start", "Cartão Físico NFC Incluso", "Envio Grátis para todo Brasil", "PDF Interativo de Bônus", "Suporte Prioritário WhatsApp"],
+            active: true,
+            order: 2,
+            popular: true,
+            cta: "Mais Vendido"
+          }
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPlans();
+  }, []);
+
+  const handleBuy = (plan: any) => {
+    // We can't easily trigger the same checkout from here without more props,
+    // so we redirect to the checkout view of the main app.
+    // However, DashboardLayout doesn't have addToCart.
+    // To make it simple, we redirect them to the landing page pricing
+    window.location.href = '/#planos';
+  };
+
+  if (loading) return <div className="flex justify-center p-12"><Loader2 className="animate-spin w-12 h-12 text-vialinks-purple" /></div>;
+
+  return (
+    <div className="space-y-8">
+      <div className="bg-vialinks-purple/10 p-8 rounded-3xl border border-vialinks-purple/20 text-center">
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">Seu painel está quase pronto!</h2>
+        <p className="text-slate-600">Adquira um de nossos planos abaixo para liberar todas as funcionalidades e começar a usar seu card profissional.</p>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        {plans.map((plan) => (
+          <div key={plan.id} className={`p-8 rounded-3xl border ${plan.popular ? 'border-vialinks-purple ring-2 ring-vialinks-purple/20 bg-white' : 'border-slate-100 bg-slate-50'} flex flex-col`}>
+             <h3 className="text-xl font-bold text-slate-900 mb-2">{plan.name}</h3>
+             <p className="text-3xl font-extrabold text-vialinks-purple mb-6">
+               {typeof plan.price === 'number' ? plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : plan.price}
+             </p>
+             <ul className="space-y-3 mb-8 flex-grow">
+               {plan.features.map((f: string, i: number) => (
+                 <li key={i} className="flex items-center gap-2 text-sm text-slate-600">
+                   <Check className="w-4 h-4 text-green-500" /> {f}
+                 </li>
+               ))}
+             </ul>
+             <button 
+               onClick={() => handleBuy(plan)}
+               className={`w-full py-3 rounded-xl font-bold transition-all ${plan.popular ? 'bg-vialinks-purple text-white hover:bg-vialinks-purple/90' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}
+             >
+               {plan.cta || "Selecionar Plano"}
+             </button>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -3405,16 +3527,9 @@ export const LoginView = ({ setView, setUser }: any) => {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const checkAccessAndLogin = async (uid: string) => {
-    // Check if user is admin
-    const userDoc = await getDoc(doc(db, "users", uid));
-    if (userDoc.exists() && userDoc.data()?.role === 'admin') {
-      return true;
-    }
-    // Check if user has any purchase
-    const salesQuery = query(collection(db, "sales"), where("userId", "==", uid));
-    const salesSnapshot = await getDocs(salesQuery);
-    return !salesSnapshot.empty;
+  const checkAccessAndLogin = async (uid: string, email?: string | null) => {
+    // Anyone who reaches this point (authenticated) can access
+    return true;
   };
 
   const handleSubmit = async (e: any) => {
@@ -3426,12 +3541,6 @@ export const LoginView = ({ setView, setUser }: any) => {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const hasAccess = await checkAccessAndLogin(userCredential.user.uid);
-      if (!hasAccess) {
-        await auth.signOut();
-        alert("Acesso não autorizado. O login está disponível apenas para clientes que já realizaram uma compra. Adquira seu card ViaLinks para acessar o painel.");
-        return;
-      }
       // User state will be handled by App's onAuthStateChanged
       setView('dashboard');
     } catch (error: any) {
@@ -3455,12 +3564,6 @@ export const LoginView = ({ setView, setUser }: any) => {
         // Access check for redirect is handled after redirect completion in App's onAuthStateChanged
       } else {
         const result = await signInWithPopup(auth, provider);
-        const hasAccess = await checkAccessAndLogin(result.user.uid);
-        if (!hasAccess) {
-          await auth.signOut();
-          alert("Acesso não autorizado. O login está disponível apenas para clientes que já realizaram uma compra. Adquira seu card ViaLinks para acessar o painel.");
-          return;
-        }
         setView('dashboard');
       }
     } catch (error: any) {

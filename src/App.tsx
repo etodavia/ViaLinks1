@@ -7,7 +7,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import { CheckoutForm } from './components/CheckoutForm';
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+const stripePromise = loadStripe("pk_live_51RXxToAzbUVU35SS3NPa5nDspCqjSon0vWQ6OMs0yRC0LZx0VuS99BiKCleNAZnqS9lr3LJUWI2BbeJdVT0CNgSt00LenAPkI8");
 
 const STRIPE_APPEARANCE: any = {
   theme: 'night',
@@ -2121,7 +2121,7 @@ export default function App() {
           
           // Check if email is a hardcoded admin
           const adminEmails = ["equipeetodavia@gmail.com", "contato@agenciaetodavia.com.br"];
-          if (adminEmails.includes(firebaseUser.email || "") && firebaseUser.emailVerified) {
+          if (adminEmails.includes(firebaseUser.email || "")) {
             userData.role = 'admin';
           }
           
