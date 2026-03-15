@@ -40,6 +40,9 @@
   body {
     @apply font-sans text-white bg-black;
   }
+  input, textarea, select {
+    color: #334155; /* slate-700 - dark gray for readability */
+  }
 }
 
 @media print {
