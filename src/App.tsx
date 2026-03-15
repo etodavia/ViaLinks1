@@ -2208,7 +2208,7 @@ export default function App() {
 
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-900 text-white font-sans">Carregando...</div>}>
-      {view === 'dashboard' && user && <DashboardLayout user={user} setView={setView} onLogout={handleLogout} />}
+      {view === 'dashboard' && user && <DashboardLayout user={user} setView={setView} onLogout={handleLogout} onAddToCart={addToCart} />}
       {view === 'admin' && user?.role === 'admin' && <AdminDashboard user={user} setView={setView} onLogout={handleLogout} />}
       {view === 'login' && <LoginView setView={setView} setUser={setUser} />}
       {view === 'checkout' && <CheckoutView cart={cart} user={user} isProcessing={isProcessing} onCheckout={handleCheckout} setView={setView} content={siteContent} />}

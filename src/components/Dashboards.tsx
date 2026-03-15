@@ -426,7 +426,7 @@ const TestimonialModeration = () => {
   );
 };
 
-export const DashboardLayout = ({ user, setView, onLogout }: any) => {
+export const DashboardLayout = ({ user, setView, onLogout, onAddToCart }: any) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [showOnboarding, setShowOnboarding] = useState(user?.hasSeenOnboarding === false);
   const [hasActiveOrders, setHasActiveOrders] = useState(false);
@@ -623,7 +623,7 @@ export const DashboardLayout = ({ user, setView, onLogout }: any) => {
             {activeTab === 'delivery' && <DeliverySection user={user} />}
             {activeTab === 'testimonial' && (hasActiveOrders || user.role === 'admin') && <TestimonialForm user={user} />}
             {activeTab === 'config' && <AccountSettings user={user} setView={setView} />}
-            {activeTab === 'store' && <StoreTab user={user} />}
+            {activeTab === 'store' && <StoreTab user={user} setView={setView} onAddToCart={onAddToCart} />}
           </div>
         </div>
       </div>
@@ -1023,7 +1023,7 @@ const DeliverySection = ({ user }: any) => {
   );
 };
 
-export const StoreTab = ({ user }: any) => {
+export const StoreTab = ({ user, setView, onAddToCart }: any) => {
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -1112,11 +1112,14 @@ export const StoreTab = ({ user }: any) => {
   }, []);
 
   const handleBuy = (plan: any) => {
-    // We can't easily trigger the same checkout from here without more props,
-    // so we redirect to the checkout view of the main app.
-    // However, DashboardLayout doesn't have addToCart.
-    // To make it simple, we redirect them to the landing page pricing
-    window.location.href = '/#planos';
+    onAddToCart({
+      id: plan.id,
+      name: plan.name,
+      price: plan.numericPrice || plan.price,
+      image: "189861.jpg", 
+      description: plan.name
+    });
+    setView('checkout');
   };
 
   if (loading) return <div className="flex justify-center p-12"><Loader2 className="animate-spin w-12 h-12 text-vialinks-purple" /></div>;
