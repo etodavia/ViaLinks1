@@ -1115,11 +1115,12 @@ export const StoreTab = ({ user, setView, onAddToCart }: any) => {
     onAddToCart({
       id: plan.id,
       name: plan.name,
-      price: plan.numericPrice || plan.price,
+      price: plan.price, // cents
+      numericPrice: plan.numericPrice, // reals
       image: "189861.jpg", 
       description: plan.name
     });
-    setView('checkout');
+    // Removed setView('checkout') to just open cart as requested
   };
 
   if (loading) return <div className="flex justify-center p-12"><Loader2 className="animate-spin w-12 h-12 text-vialinks-purple" /></div>;

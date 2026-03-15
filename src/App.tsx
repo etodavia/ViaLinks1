@@ -1510,9 +1510,20 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
 
   const total = cart.reduce((acc, item) => {
     let price = 0;
-    if (typeof item.price === 'number') price = item.price / 100;
-    else if (typeof item.price === 'string') price = parseInt(item.price.replace(/\D/g, '')) / 100;
-    else if (item.numericPrice) price = item.numericPrice;
+    // Standardize price calculation to always handle cents
+    if (typeof item.price === 'number') {
+      // If the number looks like a cent amount (> 1000) or we know it's cents, treat as cents
+      // Otherwise if it's explicitly cents (item.isCents), divide by 100
+      price = item.price / 100;
+    } else if (typeof item.price === 'string') {
+      price = parseFloat(item.price.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+    }
+    
+    // Safety fallback for numericPrice
+    if (!price && item.numericPrice) {
+      price = item.numericPrice;
+    }
+    
     return acc + (price * item.quantity);
   }, 0);
 
@@ -1562,7 +1573,7 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
           items: cart.map(item => ({
             id: item.id,
             quantity: item.quantity,
-            numericPrice: item.numericPrice || (typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^\d,]/g, '').replace(',', '.')))
+            numericPrice: item.numericPrice
           })),
           email: data.email,
           name: data.name
@@ -1863,10 +1874,7 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
               
               <div className="space-y-4 mb-6">
                 {cart.map((item) => {
-                  let itemPrice = 0;
-                  if (typeof item.price === 'number') itemPrice = item.price / 100;
-                  else if (typeof item.price === 'string') itemPrice = parseInt(item.price.replace(/\D/g, '')) / 100;
-                  else if (item.numericPrice) itemPrice = item.numericPrice;
+                  let itemPrice = item.numericPrice || 0;
 
                   return (
                     <div key={item.id} className="flex gap-4">
@@ -2027,7 +2035,7 @@ const ThankYouView = ({ setView, content, purchaseEmail, purchaseStatus, user }:
   );
 };
 
-export default function App() {
+function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [cart, setCart] = useState<any[]>([]);
@@ -2087,7 +2095,7 @@ export default function App() {
       if (exists) {
         return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
       }
-      return [...prev, item];
+      return [...prev, { ...item, quantity: 1 }];
     });
     setIsCartOpen(true);
   };
@@ -2232,7 +2240,10 @@ export default function App() {
               onClose={() => setIsCartOpen(false)} 
               items={cart} 
               onRemove={removeFromCart}
-              onCheckout={handleCheckout}
+              onCheckout={() => {
+                setIsCartOpen(false);
+                setView('checkout');
+              }}
               isProcessing={isProcessing}
             />
             <Offcanvas 
@@ -2264,15 +2275,16 @@ export default function App() {
                   <Pricing user={user} setView={setView} onAddToCart={addToCart} content={siteContent} />
                 </>
               )}
-              {view === 'terms' && <TermsView setView={setView} />}
-              {view === 'privacy' && <PrivacyView setView={setView} />}
-              {view === 'store' && <StoreView setView={setView} user={user} />}
+              {view === 'terms' && <TermsView setView={setView} content={siteContent} />}
+              {view === 'privacy' && <PrivacyView setView={setView} content={siteContent} />}
+              {view === 'store' && <StoreView user={user} setView={setView} onAddToCart={addToCart} content={siteContent} />}
             </main>
             <Footer setView={setView} content={siteContent} />
-            <LGPDBar />
           </div>
         </div>
       )}
     </Suspense>
   );
-}
+};
+
+export default App;
