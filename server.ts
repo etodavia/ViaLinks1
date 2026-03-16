@@ -13,6 +13,16 @@ import crypto from "crypto";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Global error handlers to prevent silent crashes
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[Process] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('[Process] Uncaught Exception:', error);
+  // Optional: process.exit(1) if you want a clean restart from the host
+});
+
 async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3001;
@@ -53,7 +63,10 @@ async function startServer() {
     const key = process.env.STRIPE_SECRET_KEY;
     if (key) {
       console.log("[Stripe] Using Secret Key from environment.");
-      stripeClient = new Stripe(key.trim());
+      stripeClient = new Stripe(key.trim(), {
+        timeout: 10000, // 10 seconds timeout
+        maxNetworkRetries: 0 // Fail fast
+      });
       return stripeClient;
     }
 
@@ -64,7 +77,10 @@ async function startServer() {
         if (configDoc.exists) {
           const cloudKey = configDoc.data()?.settings?.secretKey;
           if (cloudKey) {
-            stripeClient = new Stripe(cloudKey.trim());
+            stripeClient = new Stripe(cloudKey.trim(), {
+              timeout: 10000,
+              maxNetworkRetries: 0
+            });
             return stripeClient;
           }
         }
@@ -245,8 +261,19 @@ async function startServer() {
   app.use(express.json());
 
 
+  // Health check endpoint
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", env: process.env.NODE_ENV });
+    res.json({ 
+      status: "ok", 
+      env: process.env.NODE_ENV,
+      memory: process.memoryUsage(),
+      uptime: process.uptime()
+    });
+  });
+
+  // Ping endpoint for fast frontend checks
+  app.get("/api/ping", (req, res) => {
+    res.json({ pong: true, time: new Date().toISOString() });
   });
 
   // API Routes

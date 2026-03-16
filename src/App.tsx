@@ -1619,6 +1619,18 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
     }
   };
 
+  const checkServerHealth = async () => {
+    try {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch('/api/ping', { signal: controller.signal });
+      clearTimeout(id);
+      return res.ok;
+    } catch (e) {
+      return false;
+    }
+  };
+
   const onFinalizeClick = async () => {
     if (!formData.email || !formData.email.includes('@')) {
       alert("Por favor, insira um e-mail válido para receber o acesso.");
@@ -1635,14 +1647,28 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
 
     if (clientSecret) {
       setIsCheckoutOpen(true);
-    } else {
+      return;
+    }
+
+    setIsIntentLoading(true);
+    try {
+      // 1. Quick health check to detect 503/offline early
+      const isAlive = await checkServerHealth();
+      if (!isAlive) {
+        throw new Error("O servidor de pagamentos não está respondendo. Por favor, aguarde um momento e tente novamente (503/Timeout).");
+      }
+
       const result = await handleCreatePaymentIntent(formData) as any;
       if (result && !result.error && typeof result === 'string') {
         setIsCheckoutOpen(true);
       } else {
-        const detail = result?.error || intentError || "Erro de comunicação";
-        alert(`Não foi possível iniciar o pagamento: ${detail}. Por favor, tente novamente ou entre em contato com o suporte.`);
+        const detail = result?.error || intentError || "Conexão instável";
+        alert(`Não foi possível iniciar o pagamento: ${detail}.`);
       }
+    } catch (err: any) {
+      alert(`Erro: ${err.message}`);
+    } finally {
+      setIsIntentLoading(false);
     }
   };
 
