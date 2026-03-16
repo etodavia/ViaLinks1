@@ -63,47 +63,36 @@ export const CheckoutForm = ({ clientSecret, amount, onCancel }: { clientSecret:
   }
 
   return (
-    <form id="payment-form" onSubmit={handleSubmit} className="p-4 space-y-4">
-      <div className="mb-4">
-        <h2 className="text-xl font-bold text-white mb-2">Finalizar Pagamento</h2>
-        <p className="text-sm text-slate-400">
-          Total: <span className="text-white font-bold">{amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-        </p>
-      </div>
-
+    <form id="payment-form" onSubmit={handleSubmit} className="space-y-6">
       <PaymentElement id="payment-element" options={{ layout: 'accordion' }} />
 
       {message && (
-        <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-xl flex items-center gap-3 text-red-500 text-sm">
+        <div className="bg-red-50 border border-red-100 p-4 rounded-xl flex items-center gap-3 text-red-600 text-sm font-medium">
           <AlertCircle className="w-5 h-5 shrink-0" />
           <p>{message}</p>
         </div>
       )}
 
-      <div className="flex flex-col gap-3 pt-4">
-        <button
-          disabled={isLoading || !stripe || !elements}
-          id="submit"
-          className="w-full bg-vialinks-orange text-white py-4 rounded-xl font-black uppercase tracking-widest hover:bg-vialinks-orange/90 transition-all shadow-lg shadow-vialinks-orange/20 flex items-center justify-center gap-3 disabled:opacity-50"
-        >
-          {isLoading ? (
-            <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          ) : (
-            "Pagar Agora"
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={isLoading}
-          className="w-full text-slate-500 hover:text-white transition-colors text-sm font-bold py-2"
-        >
-          Cancelar e voltar
-        </button>
-      </div>
-      
-      <p className="text-[10px] text-center text-slate-500">
-        Pagamento 100% seguro processado por Stripe. Ao clicar em Pagar Agora, você concorda com nossos termos.
+      <button
+        disabled={isLoading || !stripe || !elements}
+        id="submit"
+        className="w-full bg-vialinks-orange text-white py-5 rounded-2xl font-black text-xl shadow-lg shadow-vialinks-orange/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+      >
+        {isLoading ? (
+          <>
+            <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+            <span>PROCESSANDO...</span>
+          </>
+        ) : (
+          <>
+            CONCLUIR PAGAMENTO AGORA
+            <Check className="w-6 h-6" />
+          </>
+        )}
+      </button>
+
+      <p className="text-[10px] text-center text-slate-500 font-bold uppercase tracking-widest opacity-60">
+        Pagamento 100% Seguro via Stripe
       </p>
     </form>
   );

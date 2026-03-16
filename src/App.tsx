@@ -1522,7 +1522,7 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
     name: user?.displayName || "",
     email: user?.email || "",
     phone: "",
-    taxId: "", // CPF or CNPJ
+    taxId: "",
     zip: "",
     street: "",
     number: "",
@@ -1532,7 +1532,7 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
     state: ""
   });
 
-  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes
+  const [timeLeft, setTimeLeft] = useState(600);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -1548,10 +1548,6 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
   };
 
   useEffect(() => {
-    // Reset client secret when cart changes to ensure we fetch a fresh one
-    setClientSecret(null);
-    
-    // Pre-fetch payment intent if we have basic info and cart is not empty
     if (user?.email && user?.displayName && cart.length > 0) {
       handleCreatePaymentIntent({ email: user.email, name: user.displayName });
     }
@@ -1563,7 +1559,7 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
     setIntentError(null);
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
       const response = await fetch('/api/create-payment-intent', {
         method: 'POST',
@@ -1585,7 +1581,7 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         const text = await response.text();
-        let message = "O servidor retornou um formato inesperado (HTML em vez de JSON).";
+        let message = "O servidor retornou um formato inesperado.";
         if (text.includes('<title>')) {
           const match = text.match(/<title>([^<]*)<\/title>/);
           if (match) message += ` Erro: ${match[1]}`;
@@ -1593,25 +1589,18 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
         throw new Error(`${message} (Status: ${response.status})`);
       }
 
-      if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.error || `Erro do servidor (${response.status})`);
-      }
       const result = await response.json();
+      if (!response.ok) throw new Error(result.error || `Erro do servidor (${response.status})`);
+      
       if (result.clientSecret) {
         setClientSecret(result.clientSecret);
         return result.clientSecret;
       } else {
-        const errMsg = result.error || "Erro ao criar intenção de pagamento";
-        setIntentError(errMsg);
-        throw new Error(errMsg);
+        throw new Error(result.error || "Erro ao criar intenção de pagamento");
       }
     } catch (error: any) {
-      console.error("Stripe pre-fetch error:", error);
-      let detail = error.message;
-      if (error.name === 'AbortError') {
-        detail = "A conexão com o servidor expirou. Por favor, verifique sua internet e tente novamente.";
-      }
+      console.error("Stripe error:", error);
+      const detail = error.name === 'AbortError' ? "Tempo de conexão esgotado." : error.message;
       setIntentError(detail);
       return { error: detail };
     } finally {
@@ -1633,46 +1622,31 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
 
   const onFinalizeClick = async () => {
     if (!formData.email || !formData.email.includes('@')) {
-      alert("Por favor, insira um e-mail válido para receber o acesso.");
+      alert("E-mail inválido.");
       return;
     }
     if (!formData.name || formData.name.length < 3) {
-      alert("Por favor, insira seu nome completo.");
+      alert("Nome incompleto.");
       return;
     }
     if (!formData.zip || !formData.street || !formData.number || !formData.city || !formData.state) {
-      alert("Por favor, preencha o endereço completo para a entrega do seu card.");
+      alert("Preencha o endereço completo.");
       return;
     }
 
-    if (clientSecret) {
-      setIsCheckoutOpen(true);
-      return;
-    }
-
-    setIsIntentLoading(true);
-    try {
-      // 1. Quick health check to detect 503/offline early
-      const isAlive = await checkServerHealth();
-      if (!isAlive) {
-        throw new Error("O servidor de pagamentos não está respondendo. Por favor, aguarde um momento e tente novamente (503/Timeout).");
+    if (!clientSecret) {
+      setIsIntentLoading(true);
+      try {
+        const isAlive = await checkServerHealth();
+        if (!isAlive) throw new Error("Servidor offline (503).");
+        await handleCreatePaymentIntent(formData);
+      } catch (err: any) {
+        alert(err.message);
+      } finally {
+        setIsIntentLoading(false);
       }
-
-      const result = await handleCreatePaymentIntent(formData) as any;
-      if (result && !result.error && typeof result === 'string') {
-        setIsCheckoutOpen(true);
-      } else {
-        const detail = result?.error || intentError || "Conexão instável";
-        alert(`Não foi possível iniciar o pagamento: ${detail}.`);
-      }
-    } catch (err: any) {
-      alert(`Erro: ${err.message}`);
-    } finally {
-      setIsIntentLoading(false);
     }
   };
-
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   if (cart.length === 0) {
     return (
@@ -1690,32 +1664,6 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-      <AnimatePresence>
-        {isCheckoutOpen && clientSecret && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4"
-          >
-            <motion.div 
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              className="bg-slate-900 w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-[40px] shadow-2xl border border-white/10"
-              onClick={e => e.stopPropagation()}
-            >
-              <Elements stripe={stripePromise} options={{ clientSecret, appearance: STRIPE_APPEARANCE }}>
-                <CheckoutForm 
-                  clientSecret={clientSecret} 
-                  amount={total} 
-                  onCancel={() => setIsCheckoutOpen(false)} 
-                />
-              </Elements>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <header className="bg-white border-b border-slate-200 py-4 px-4 sticky top-0 z-50">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('landing')}>
@@ -1751,8 +1699,7 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
                     <label className="text-xs font-bold text-slate-500 uppercase">Nome Completo</label>
                     <input 
                       type="text" 
-                      placeholder="Como no seu documento"
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-vialinks-purple outline-none transition-all"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-vialinks-purple outline-none"
                       value={formData.name}
                       onChange={e => setFormData({...formData, name: e.target.value})}
                     />
@@ -1761,122 +1708,30 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
                     <label className="text-xs font-bold text-slate-500 uppercase">E-mail</label>
                     <input 
                       type="email" 
-                      placeholder="Onde você receberá o acesso"
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-vialinks-purple outline-none transition-all"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-vialinks-purple outline-none"
                       value={formData.email}
                       onChange={e => setFormData({...formData, email: e.target.value})}
-                      onBlur={() => {
-                        if (formData.email.includes('@') && formData.name) {
-                          handleCreatePaymentIntent(formData);
-                        }
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase">WhatsApp / Telefone</label>
-                    <input 
-                      type="tel" 
-                      placeholder="(00) 00000-0000"
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-vialinks-purple outline-none transition-all"
-                      value={formData.phone}
-                      onChange={e => setFormData({...formData, phone: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase">CPF ou CNPJ</label>
-                    <input 
-                      type="text" 
-                      placeholder="000.000.000-00"
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-vialinks-purple outline-none transition-all"
-                      value={formData.taxId}
-                      onChange={e => setFormData({...formData, taxId: e.target.value})}
-                      required
+                      onBlur={() => { if (formData.email.includes('@') && formData.name) handleCreatePaymentIntent(formData); }}
                     />
                   </div>
                 </div>
 
-                <div className="h-px bg-slate-100 my-6" />
-                <h4 className="text-sm font-bold text-slate-800 mb-4">Endereço de Entrega</h4>
-                
-                <div className="grid sm:grid-cols-3 gap-4">
+                <div className="grid sm:grid-cols-3 gap-4 pt-4 border-t border-slate-50 mt-4">
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-500 uppercase">CEP</label>
-                    <input 
-                      type="text" 
-                      placeholder="00000-000"
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-vialinks-purple outline-none transition-all"
-                      value={formData.zip}
-                      onChange={e => setFormData({...formData, zip: e.target.value})}
-                    />
+                    <input type="text" className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none" value={formData.zip} onChange={e => setFormData({...formData, zip: e.target.value})} />
                   </div>
                   <div className="sm:col-span-2 space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Rua / Logradouro</label>
-                    <input 
-                      type="text" 
-                      placeholder="Ex: Av. Paulista"
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-vialinks-purple outline-none transition-all"
-                      value={formData.street}
-                      onChange={e => setFormData({...formData, street: e.target.value})}
-                    />
+                    <label className="text-xs font-bold text-slate-500 uppercase">Endereço</label>
+                    <input type="text" className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none" value={formData.street} onChange={e => setFormData({...formData, street: e.target.value})} />
                   </div>
                 </div>
-
                 <div className="grid sm:grid-cols-3 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Número</label>
-                    <input 
-                      type="text" 
-                      placeholder="123"
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-vialinks-purple outline-none transition-all"
-                      value={formData.number}
-                      onChange={e => setFormData({...formData, number: e.target.value})}
-                    />
-                  </div>
-                  <div className="sm:col-span-2 space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Complemento</label>
-                    <input 
-                      type="text" 
-                      placeholder="Apto, Bloco, etc"
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-vialinks-purple outline-none transition-all"
-                      value={formData.complement}
-                      onChange={e => setFormData({...formData, complement: e.target.value})}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid sm:grid-cols-3 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Bairro</label>
-                    <input 
-                      type="text" 
-                      placeholder="Bairro"
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-vialinks-purple outline-none transition-all"
-                      value={formData.neighborhood}
-                      onChange={e => setFormData({...formData, neighborhood: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Cidade</label>
-                    <input 
-                      type="text" 
-                      placeholder="Cidade"
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-vialinks-purple outline-none transition-all"
-                      value={formData.city}
-                      onChange={e => setFormData({...formData, city: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Estado</label>
-                    <input 
-                      type="text" 
-                      placeholder="UF"
-                      maxLength={2}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-vialinks-purple outline-none transition-all uppercase"
-                      value={formData.state}
-                      onChange={e => setFormData({...formData, state: e.target.value})}
-                    />
+                  <input type="text" placeholder="Número" className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none" value={formData.number} onChange={e => setFormData({...formData, number: e.target.value})} />
+                  <input type="text" placeholder="Bairro" className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none" value={formData.neighborhood} onChange={e => setFormData({...formData, neighborhood: e.target.value})} />
+                  <div className="flex gap-2">
+                    <input type="text" placeholder="Cidade" className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} />
+                    <input type="text" placeholder="UF" className="w-20 px-4 py-3 rounded-xl border border-slate-200 outline-none uppercase" value={formData.state} onChange={e => setFormData({...formData, state: e.target.value})} />
                   </div>
                 </div>
               </div>
@@ -1887,54 +1742,26 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
                 <div className="w-8 h-8 bg-vialinks-purple rounded-full flex items-center justify-center text-white text-sm font-bold">2</div>
                 <h3 className="font-bold text-slate-800">Pagamento</h3>
               </div>
-              <div className="p-6 space-y-6">
-                <button 
-                  onClick={onFinalizeClick}
-                  disabled={isIntentLoading}
-                  className="w-full bg-vialinks-orange text-white py-5 rounded-2xl font-black text-xl shadow-lg shadow-vialinks-orange/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                >
-                  {isIntentLoading ? (
-                    <>
-                      <Loader2 className="w-6 h-6 animate-spin" />
-                      <span>PROCESSANDO...</span>
-                    </>
-                  ) : (
-                    <>
-                      FINALIZAR COMPRA AGORA
-                      <ArrowRight className="w-6 h-6" />
-                    </>
-                  )}
-                </button>
-
-                {intentError && (
-                  <div className="bg-red-50 border border-red-100 p-4 rounded-xl flex items-center gap-3 text-red-600 text-sm font-medium">
-                    <AlertCircle className="w-5 h-5 shrink-0" />
-                    <p>{intentError}</p>
+              <div className="p-6">
+                {clientSecret ? (
+                  <Elements stripe={stripePromise} options={{ clientSecret, appearance: { ...STRIPE_APPEARANCE, theme: 'flat' } }}>
+                    <CheckoutForm clientSecret={clientSecret} amount={total} onCancel={() => setClientSecret(null)} />
+                  </Elements>
+                ) : (
+                  <div className="space-y-4">
+                    <button 
+                      onClick={onFinalizeClick}
+                      disabled={isIntentLoading}
+                      className="w-full bg-vialinks-orange text-white py-5 rounded-2xl font-black text-xl shadow-lg shadow-vialinks-orange/20 flex items-center justify-center gap-3"
+                    >
+                      {isIntentLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <>PROSSEGUIR PARA PAGAMENTO <ArrowRight className="w-6 h-6" /></>}
+                    </button>
+                    {intentError && <p className="text-red-500 text-sm text-center font-bold italic">{intentError}</p>}
+                    <div className="opacity-30 grayscale flex justify-center gap-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      <span>Cartão de Crédito</span>
+                    </div>
                   </div>
                 )}
-
-                <div className="flex flex-wrap justify-center gap-4 opacity-40 grayscale uppercase text-[8px] font-bold text-slate-500">
-                  <span>Cartão de Crédito</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4">
-              <div className="flex flex-col items-center text-center space-y-2">
-                <ShieldCheck className="w-6 h-6 text-slate-400" />
-                <span className="text-[10px] font-bold text-slate-500 uppercase">Compra Segura</span>
-              </div>
-              <div className="flex flex-col items-center text-center space-y-2">
-                <Lock className="w-6 h-6 text-slate-400" />
-                <span className="text-[10px] font-bold text-slate-500 uppercase">Privacidade</span>
-              </div>
-              <div className="flex flex-col items-center text-center space-y-2">
-                <Zap className="w-6 h-6 text-slate-400" />
-                <span className="text-[10px] font-bold text-slate-500 uppercase">Acesso Imediato</span>
-              </div>
-              <div className="flex flex-col items-center text-center space-y-2">
-                <Star className="w-6 h-6 text-slate-400" />
-                <span className="text-[10px] font-bold text-slate-500 uppercase">Satisfação</span>
               </div>
             </div>
           </div>
@@ -1942,76 +1769,22 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
           <div className="space-y-6">
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sticky top-24">
               <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2">
-                <ShoppingBag className="w-5 h-5 text-vialinks-purple" />
-                Resumo do Pedido
+                <ShoppingBag className="w-5 h-5 text-vialinks-purple" /> Resumo do Pedido
               </h3>
-              
               <div className="space-y-4 mb-6">
-                {cart.map((item) => {
-                  let itemPrice = item.numericPrice || 0;
-
-                  return (
-                    <div key={item.id} className="flex gap-4">
-                      <div className="w-16 h-16 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0 border border-slate-100">
-                        {item.imageUrl ? (
-                          <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" loading="lazy" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-slate-300">
-                            <Package className="w-6 h-6" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-slate-800 text-sm truncate">{item.name}</p>
-                        <p className="text-xs text-slate-500">Qtd: {item.quantity}</p>
-                        <p className="text-sm font-bold text-vialinks-purple mt-1">
-                          R$ {(itemPrice * item.quantity).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </p>
-                      </div>
+                {cart.map((item) => (
+                  <div key={item.id} className="flex gap-4">
+                    <div className="w-12 h-12 bg-slate-100 rounded-lg flex-shrink-0" />
+                    <div className="flex-1 min-w-0 text-sm">
+                      <p className="font-bold truncate">{item.name}</p>
+                      <p className="font-bold text-vialinks-purple">R$ {(item.numericPrice || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                     </div>
-                  );
-                })}
-              </div>
-
-              <div className="border-t border-slate-100 pt-4 space-y-2">
-                <div className="flex justify-between text-sm text-slate-500">
-                  <span>Subtotal</span>
-                  <span>R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between text-sm text-emerald-600 font-medium">
-                  <span>Desconto</span>
-                  <span>- R$ 0,00</span>
-                </div>
-                <div className="flex justify-between text-xl font-black text-slate-900 pt-2">
-                  <span>Total</span>
-                  <span>R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                </div>
-              </div>
-
-              <div className="mt-8 p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-3">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-vialinks-orange shadow-sm flex-shrink-0">
-                    <ShieldCheck className="w-6 h-6" />
                   </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-800">Garantia de 7 Dias</p>
-                    <p className="text-[10px] text-slate-500 leading-tight">Se não gostar, devolvemos seu dinheiro sem burocracia.</p>
-                  </div>
-                </div>
+                ))}
               </div>
-            </div>
-
-            <div className="bg-vialinks-purple text-white p-6 rounded-2xl shadow-lg shadow-vialinks-purple/20">
-              <div className="flex gap-1 mb-3">
-                {[1,2,3,4,5].map(i => <Star key={i} className="w-3 h-3 fill-vialinks-orange text-vialinks-orange" />)}
-              </div>
-              <p className="text-sm italic mb-4 opacity-90">"O ViaLinks mudou a forma como apresento meu trabalho. Em um toque o cliente já tem tudo."</p>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-white/20 rounded-full" />
-                <div>
-                  <p className="text-xs font-bold">Ricardo Silva</p>
-                  <p className="text-[10px] opacity-60">Empresário</p>
-                </div>
+              <div className="border-t pt-4 text-xl font-black flex justify-between">
+                <span>Total</span>
+                <span>R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
           </div>
@@ -2019,9 +1792,9 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
       </main>
 
       <footer className="py-12 px-4 text-center text-slate-400 text-xs space-y-4">
-        <p>© 2026 ViaLinks Tecnologia. Todos os direitos reservados.</p>
+        <p>© 2026 ViaLinks Tecnologia.</p>
         <div className="flex justify-center gap-4">
-          <button onClick={() => setView('terms')} className="hover:text-slate-600">Termos de Uso</button>
+          <button onClick={() => setView('terms')} className="hover:text-slate-600">Termos</button>
           <button onClick={() => setView('privacy')} className="hover:text-slate-600">Privacidade</button>
         </div>
       </footer>
