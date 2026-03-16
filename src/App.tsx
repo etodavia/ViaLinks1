@@ -50,7 +50,9 @@ import {
   Shield,
   Info,
   Cookie,
-  Eye
+  Eye,
+  Loader2,
+  AlertCircle
 } from "lucide-react";
 
 // Lazy load heavy components
@@ -1507,6 +1509,8 @@ const TestimonialsSection = () => {
 
 const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }: { cart: any[]; user: any; isProcessing: boolean; onCheckout: (data?: any) => void; setView: (v: any) => void; content?: any }) => {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [isIntentLoading, setIsIntentLoading] = useState(false);
+  const [intentError, setIntentError] = useState<string | null>(null);
 
   const total = cart.reduce((acc, item) => {
     let price = 0;
@@ -1564,7 +1568,9 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
   }, [user]);
 
   const handleCreatePaymentIntent = async (data: any) => {
-    if (!data.email) return;
+    if (!data.email) return null;
+    setIsIntentLoading(true);
+    setIntentError(null);
     try {
       const response = await fetch('/api/create-payment-intent', {
         method: 'POST',
@@ -1582,15 +1588,21 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
       const result = await response.json();
       if (result.clientSecret) {
         setClientSecret(result.clientSecret);
+        return result.clientSecret;
       } else {
-        throw new Error(result.error || "Erro ao criar intenção de pagamento");
+        const errMsg = result.error || "Erro ao criar intenção de pagamento";
+        setIntentError(errMsg);
+        throw new Error(errMsg);
       }
     } catch (error: any) {
       console.error("Stripe pre-fetch error:", error.message);
+      return null;
+    } finally {
+      setIsIntentLoading(false);
     }
   };
 
-  const onFinalizeClick = () => {
+  const onFinalizeClick = async () => {
     if (!formData.email || !formData.email.includes('@')) {
       alert("Por favor, insira um e-mail válido para receber o acesso.");
       return;
@@ -1605,13 +1617,14 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
     }
 
     if (clientSecret) {
-      // Intent already created! Show modal.
       setIsCheckoutOpen(true);
     } else {
-      // Backup just in case
-      handleCreatePaymentIntent(formData).then(() => {
+      const secret = await handleCreatePaymentIntent(formData);
+      if (secret) {
         setIsCheckoutOpen(true);
-      });
+      } else {
+        alert("Não foi possível iniciar o pagamento. Por favor, tente novamente ou entre em contato com o suporte.");
+      }
     }
   };
 
@@ -1833,11 +1846,28 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
               <div className="p-6 space-y-6">
                 <button 
                   onClick={onFinalizeClick}
-                  className="w-full bg-vialinks-orange text-white py-5 rounded-2xl font-black text-xl shadow-lg shadow-vialinks-orange/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                  disabled={isIntentLoading}
+                  className="w-full bg-vialinks-orange text-white py-5 rounded-2xl font-black text-xl shadow-lg shadow-vialinks-orange/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                 >
-                  FINALIZAR COMPRA AGORA
-                  <ArrowRight className="w-6 h-6" />
+                  {isIntentLoading ? (
+                    <>
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                      <span>PROCESSANDO...</span>
+                    </>
+                  ) : (
+                    <>
+                      FINALIZAR COMPRA AGORA
+                      <ArrowRight className="w-6 h-6" />
+                    </>
+                  )}
                 </button>
+
+                {intentError && (
+                  <div className="bg-red-50 border border-red-100 p-4 rounded-xl flex items-center gap-3 text-red-600 text-sm font-medium">
+                    <AlertCircle className="w-5 h-5 shrink-0" />
+                    <p>{intentError}</p>
+                  </div>
+                )}
 
                 <div className="flex flex-wrap justify-center gap-4 opacity-40 grayscale uppercase text-[8px] font-bold text-slate-500">
                   <span>Cartão de Crédito</span>
@@ -2216,8 +2246,37 @@ function App() {
 
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-900 text-white font-sans">Carregando...</div>}>
-      {view === 'dashboard' && user && <DashboardLayout user={user} setView={setView} onLogout={handleLogout} onAddToCart={addToCart} />}
-      {view === 'admin' && user?.role === 'admin' && <AdminDashboard user={user} setView={setView} onLogout={handleLogout} />}
+      <CartDrawer 
+        isOpen={isCartOpen} 
+        onClose={() => setIsCartOpen(false)} 
+        items={cart} 
+        onRemove={removeFromCart}
+        onCheckout={() => {
+          setIsCartOpen(false);
+          setView('checkout');
+        }}
+        isProcessing={isProcessing}
+      />
+      
+      {view === 'dashboard' && user && (
+        <DashboardLayout 
+          user={user} 
+          setView={setView} 
+          onLogout={handleLogout} 
+          onAddToCart={addToCart} 
+          onOpenCart={() => setIsCartOpen(true)}
+          cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)}
+        />
+      )}
+      {view === 'admin' && user?.role === 'admin' && (
+        <AdminDashboard 
+          user={user} 
+          setView={setView} 
+          onLogout={handleLogout} 
+          onOpenCart={() => setIsCartOpen(true)}
+          cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)}
+        />
+      )}
       {view === 'login' && <LoginView setView={setView} setUser={setUser} />}
       {view === 'checkout' && <CheckoutView cart={cart} user={user} isProcessing={isProcessing} onCheckout={handleCheckout} setView={setView} content={siteContent} />}
 
@@ -2234,17 +2293,6 @@ function App() {
               onOpenCart={() => setIsCartOpen(true)}
               cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)}
               content={siteContent}
-            />
-            <CartDrawer 
-              isOpen={isCartOpen} 
-              onClose={() => setIsCartOpen(false)} 
-              items={cart} 
-              onRemove={removeFromCart}
-              onCheckout={() => {
-                setIsCartOpen(false);
-                setView('checkout');
-              }}
-              isProcessing={isProcessing}
             />
             <Offcanvas 
               isOpen={isMenuOpen} 

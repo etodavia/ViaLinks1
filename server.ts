@@ -368,10 +368,16 @@ async function startServer() {
         total = items.reduce((sum, item) => sum + (Number(item.numericPrice) || 0) * (Number(item.quantity) || 1), 0);
       }
 
-      console.log("Calculated total:", total);
+      console.log("[PaymentIntent] Calculated total (real):", total);
 
       // Stripe expects amount in cents
       const amountInCents = Math.round(total * 100);
+      console.log("[PaymentIntent] Calculated amount in cents:", amountInCents);
+
+      if (amountInCents <= 0) {
+        console.error("[PaymentIntent] Invalid amount:", amountInCents);
+        return res.status(400).json({ error: "O valor total da compra deve ser superior a zero." });
+      }
 
       // Use the local stripe client instead of the service if it's simpler
       const stripe = await getStripe();

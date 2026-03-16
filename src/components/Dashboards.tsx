@@ -51,7 +51,9 @@ import {
   MessageSquare,
   ThumbsUp,
   Star,
-  Truck
+  Truck,
+  ShoppingCart,
+  ArrowLeft
 } from "lucide-react";
 import { FirebaseImage } from "./FirebaseImage";
 import { auth, db, storage } from "../firebase";
@@ -426,7 +428,7 @@ const TestimonialModeration = () => {
   );
 };
 
-export const DashboardLayout = ({ user, setView, onLogout, onAddToCart }: any) => {
+export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCart, cartCount }: any) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [showOnboarding, setShowOnboarding] = useState(user?.hasSeenOnboarding === false);
   const [hasActiveOrders, setHasActiveOrders] = useState(false);
@@ -474,7 +476,7 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart }: any) =
       <div className="flex min-h-screen bg-white">
         {showOnboarding && <OnboardingTutorial user={user} onComplete={handleCompleteOnboarding} />}
         {/* Sidebar */}
-        <div className="w-64 relative overflow-hidden flex flex-col">
+        <div className="w-64 relative overflow-hidden flex flex-col no-print">
           <div className="absolute inset-0 z-0">
             <FirebaseImage 
               storagePath="189861.jpg" 
@@ -528,9 +530,8 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart }: any) =
                 </button>
               )}
               <button 
-                onClick={() => (hasActiveOrders || user.role === 'admin') && setActiveTab('config')}
-                disabled={!hasActiveOrders && user.role !== 'admin'}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'config' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'} ${(!hasActiveOrders && user.role !== 'admin') ? 'opacity-30 cursor-not-allowed' : ''}`}
+                onClick={() => setActiveTab('config')}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'config' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
               >
                 <Settings className="w-5 h-5" /> Configurações
               </button>
@@ -547,7 +548,7 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart }: any) =
             <div className="mt-auto pt-6 border-t border-white/10">
               <div className="flex items-center gap-3 px-4 mb-6">
                 <div className="w-10 h-10 rounded-full bg-vialinks-orange flex items-center justify-center text-white font-bold">
-                  {user.email[0].toUpperCase()}
+                  {user.email?.[0].toUpperCase()}
                 </div>
                 <div className="overflow-hidden">
                   <p className="text-sm font-bold text-white truncate">{user.email}</p>
@@ -581,12 +582,26 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart }: any) =
                 {activeTab === 'store' ? "Adquira novos produtos e acessórios para seu card digital." : activeTab === 'config' ? "Gerencie seus dados pessoais e segurança." : "Gerencie sua conta e seus cards ViaLinks."}
               </p>
             </div>
-            <button 
-              onClick={() => setView('landing')}
-              className="text-sm font-bold text-vialinks-purple hover:underline"
-            >
-              Voltar para o Site
-            </button>
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={onOpenCart}
+                className="flex items-center gap-2 bg-slate-100 text-slate-700 px-4 py-2 rounded-xl font-bold hover:bg-slate-200 transition-all relative"
+              >
+                <ShoppingCart className="w-5 h-5 text-vialinks-purple" />
+                Carrinho
+                {cartCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-vialinks-orange text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
+              <button 
+                onClick={() => setView('landing')}
+                className="text-sm font-bold text-vialinks-purple hover:underline"
+              >
+                Voltar para o Site
+              </button>
+            </div>
           </header>
 
           <div className="max-w-4xl">
@@ -610,7 +625,7 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart }: any) =
                   <p className="text-slate-500 mb-6">Preencha os dados do seu card para que possamos iniciar a criação.</p>
                   <button 
                     onClick={() => setActiveTab('briefing')}
-                    className="flex items-center gap-2 text-vialinks-orange font-bold"
+                    className="flex items-center gap-2 text-vialinks-orange font-bold transition-colors hover:text-vialinks-orange/80"
                   >
                     Preencher Agora <ChevronRight className="w-4 h-4" />
                   </button>
@@ -1158,7 +1173,7 @@ export const StoreTab = ({ user, setView, onAddToCart }: any) => {
   );
 };
 
-export const AdminDashboard = ({ user, setView, onLogout }: any) => {
+export const AdminDashboard = ({ user, setView, onLogout, onOpenCart, cartCount }: any) => {
   const [activeTab, setActiveTab] = useState('stats');
   const [stats, setStats] = useState<any>(null);
   const [briefings, setBriefings] = useState<any[]>([]);
@@ -1379,9 +1394,25 @@ export const AdminDashboard = ({ user, setView, onLogout }: any) => {
 
         {/* Main Content */}
         <div className="flex-1 p-12 overflow-y-auto">
-          <header className="mb-12">
-            <h1 className="text-3xl font-extrabold text-slate-900">Painel de Controle</h1>
-            <p className="text-slate-500">Gerenciamento total da plataforma ViaLinks.</p>
+          <header className="flex justify-between items-center mb-12">
+            <div>
+              <h1 className="text-3xl font-extrabold text-slate-900">Painel de Controle</h1>
+              <p className="text-slate-500">Gerenciamento total da plataforma ViaLinks.</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={onOpenCart}
+                className="flex items-center gap-2 bg-slate-100 text-slate-700 px-4 py-2 rounded-xl font-bold hover:bg-slate-200 transition-all relative"
+              >
+                <ShoppingCart className="w-5 h-5 text-vialinks-purple" />
+                Carrinho
+                {cartCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-vialinks-orange text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
+            </div>
           </header>
 
           {activeTab === 'stats' && (
