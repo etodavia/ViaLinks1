@@ -361,8 +361,8 @@ async function startServer() {
   // Stripe PaymentIntent (for Elements)
   app.post("/api/create-payment-intent", async (req, res) => {
     try {
-      const { items, email, name } = req.body;
-      console.log("[PaymentIntent] Request received:", { email, name, itemsCount: items?.length });
+      const { items, email, name, phone, taxId } = req.body;
+      console.log("[PaymentIntent] Request received:", { email, name, phone, taxId, itemsCount: items?.length });
       console.log("[PaymentIntent] Items:", JSON.stringify(items));
 
       console.log("[PaymentIntent] Received request for:", email, "items:", JSON.stringify(items));
@@ -431,6 +431,8 @@ async function startServer() {
         metadata: {
           customerName: name || "",
           customerEmail: email || "",
+          customerPhone: phone || "",
+          taxId: taxId || "",
           items: JSON.stringify(items.map(i => i.id))
         }
       });

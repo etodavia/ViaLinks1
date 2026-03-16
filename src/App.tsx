@@ -1526,7 +1526,6 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
     zip: "",
     street: "",
     number: "",
-    complement: "",
     neighborhood: "",
     city: "",
     state: ""
@@ -1572,7 +1571,9 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
             numericPrice: item.numericPrice
           })),
           email: data.email,
-          name: data.name
+          name: data.name,
+          phone: data.phone,
+          taxId: data.taxId
         })
       });
 
@@ -1631,6 +1632,14 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
     }
     if (!formData.zip || !formData.street || !formData.number || !formData.city || !formData.state) {
       alert("Preencha o endereço completo.");
+      return;
+    }
+    if (!formData.phone || formData.phone.length < 10) {
+      alert("Telefone inválido.");
+      return;
+    }
+    if (!formData.taxId || formData.taxId.length < 11) {
+      alert("CPF/CNPJ inválido.");
       return;
     }
 
@@ -1708,10 +1717,34 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
                     <label className="text-xs font-bold text-slate-500 uppercase">E-mail</label>
                     <input 
                       type="email" 
+                      placeholder="seu@email.com"
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-vialinks-purple outline-none"
                       value={formData.email}
                       onChange={e => setFormData({...formData, email: e.target.value})}
                       onBlur={() => { if (formData.email.includes('@') && formData.name) handleCreatePaymentIntent(formData); }}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">WhatsApp / Telefone</label>
+                    <input 
+                      type="text" 
+                      placeholder="(00) 00000-0000"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-vialinks-purple outline-none"
+                      value={formData.phone}
+                      onChange={e => setFormData({...formData, phone: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">CPF ou CNPJ</label>
+                    <input 
+                      type="text" 
+                      placeholder="000.000.000-00"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-vialinks-purple outline-none"
+                      value={formData.taxId}
+                      onChange={e => setFormData({...formData, taxId: e.target.value})}
                     />
                   </div>
                 </div>
