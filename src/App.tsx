@@ -1575,6 +1575,23 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
           name: data.name
         })
       });
+      if (!response.ok) {
+        const text = await response.text();
+        let message = `API Error (${response.status})`;
+        try {
+          const json = JSON.parse(text);
+          message = json.error || message;
+        } catch (e) {
+          // If it's HTML, take a snippet of the body/title
+          if (text.includes('<title>')) {
+            const match = text.match(/<title>([^<]*)<\/title>/);
+            if (match) message += `: ${match[1]}`;
+          } else {
+             message += `: ${text.substring(0, 50)}...`;
+          }
+        }
+        throw new Error(message);
+      }
       const result = await response.json();
       if (result.clientSecret) {
         setClientSecret(result.clientSecret);
@@ -1585,9 +1602,14 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
         throw new Error(errMsg);
       }
     } catch (error: any) {
-      console.error("Stripe pre-fetch error:", error.message);
-      setIntentError(error.message);
-      return { error: error.message };
+      console.error("Stripe pre-fetch error:", error);
+      // Capture the actual response if possible to see HTML errors
+      let detail = error.message;
+      if (error.status) {
+        detail = `Server Error ${error.status}: ${error.message}`;
+      }
+      setIntentError(detail);
+      return { error: detail };
     } finally {
       setIsIntentLoading(false);
     }

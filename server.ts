@@ -241,8 +241,9 @@ async function startServer() {
 
     res.json({ received: true });
   });
-
+  
   app.use(express.json());
+
 
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", env: process.env.NODE_ENV });
@@ -378,6 +379,11 @@ async function startServer() {
       }
 
       console.log("[PaymentIntent] Calculated total (real):", total);
+
+      if (isNaN(total) || total <= 0) {
+        console.error("[PaymentIntent] Invalid calculated total:", total);
+        return res.status(400).json({ error: "O valor total do pedido é inválido ou zero." });
+      }
 
       // Stripe expects amount in cents
       const amountInCents = Math.round(total * 100);
