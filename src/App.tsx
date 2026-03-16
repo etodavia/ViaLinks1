@@ -1562,9 +1562,13 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
     setIsIntentLoading(true);
     setIntentError(null);
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
       const response = await fetch('/api/create-payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           items: cart.map(item => ({
             id: item.id,
@@ -1575,22 +1579,23 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
           name: data.name
         })
       });
-      if (!response.ok) {
+
+      clearTimeout(timeoutId);
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
         const text = await response.text();
-        let message = `API Error (${response.status})`;
-        try {
-          const json = JSON.parse(text);
-          message = json.error || message;
-        } catch (e) {
-          // If it's HTML, take a snippet of the body/title
-          if (text.includes('<title>')) {
-            const match = text.match(/<title>([^<]*)<\/title>/);
-            if (match) message += `: ${match[1]}`;
-          } else {
-             message += `: ${text.substring(0, 50)}...`;
-          }
+        let message = "O servidor retornou um formato inesperado (HTML em vez de JSON).";
+        if (text.includes('<title>')) {
+          const match = text.match(/<title>([^<]*)<\/title>/);
+          if (match) message += ` Erro: ${match[1]}`;
         }
-        throw new Error(message);
+        throw new Error(`${message} (Status: ${response.status})`);
+      }
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || `Erro do servidor (${response.status})`);
       }
       const result = await response.json();
       if (result.clientSecret) {
@@ -1603,10 +1608,9 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
       }
     } catch (error: any) {
       console.error("Stripe pre-fetch error:", error);
-      // Capture the actual response if possible to see HTML errors
       let detail = error.message;
-      if (error.status) {
-        detail = `Server Error ${error.status}: ${error.message}`;
+      if (error.name === 'AbortError') {
+        detail = "A conexão com o servidor expirou. Por favor, verifique sua internet e tente novamente.";
       }
       setIntentError(detail);
       return { error: detail };

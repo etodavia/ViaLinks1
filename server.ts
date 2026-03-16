@@ -470,6 +470,15 @@ async function startServer() {
       res.status(500).json({ error: error.message });
     }
   });
+  
+  // Defensive API catch-all to prevent falling through to index.html with 200 OK
+  app.all('/api/*', (req, res) => {
+    console.warn(`[Server] Unmatched API route: ${req.method} ${req.url}`);
+    res.status(404).json({ 
+      error: `Rota de API não encontrada: ${req.method} ${req.url}`,
+      message: "Verifique se a URL da API está correta e se o servidor foi atualizado."
+    });
+  });
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
