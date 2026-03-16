@@ -1561,11 +1561,14 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
   };
 
   useEffect(() => {
-    // Pre-fetch payment intent if we have basic info
-    if (user?.email && user?.displayName) {
+    // Reset client secret when cart changes to ensure we fetch a fresh one
+    setClientSecret(null);
+    
+    // Pre-fetch payment intent if we have basic info and cart is not empty
+    if (user?.email && user?.displayName && cart.length > 0) {
       handleCreatePaymentIntent({ email: user.email, name: user.displayName });
     }
-  }, [user]);
+  }, [user, cart]);
 
   const handleCreatePaymentIntent = async (data: any) => {
     if (!data.email) return null;
