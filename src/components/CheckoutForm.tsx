@@ -71,7 +71,7 @@ export const CheckoutForm = ({ clientSecret, amount, onCancel }: { clientSecret:
         </p>
       </div>
 
-      <PaymentElement id="payment-element" options={{ layout: 'tabs' }} />
+      <PaymentElement id="payment-element" options={{ layout: 'accordion' }} />
 
       {message && (
         <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-xl flex items-center gap-3 text-red-500 text-sm">

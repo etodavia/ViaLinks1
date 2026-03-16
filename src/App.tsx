@@ -1214,7 +1214,8 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
           {
             id: 'default-1',
             name: "Plano Start",
-            price: 97,
+            price: (97).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+            numericPrice: 97,
             features: ["Card Digital Personalizado", "Link na Bio Profissional", "Suporte via E-mail", "Atualizações Ilimitadas"],
             excludedFeatures: ["Cartão Físico NFC", "Envio Grátis", "PDF Interativo de Bônus"],
             active: true,
@@ -1225,7 +1226,8 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
           {
             id: 'default-2',
             name: "Plano Profissional + NFC",
-            price: 297,
+            price: (297).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+            numericPrice: 297,
             features: ["Tudo do Plano Start", "Cartão Físico NFC Incluso", "Envio Grátis para todo Brasil", "PDF Interativo de Bônus", "Suporte Prioritário WhatsApp"],
             excludedFeatures: ["Domínio Próprio", "Consultoria de SEO"],
             active: true,
@@ -1236,7 +1238,8 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
           {
             id: 'default-3',
             name: "Plano Business",
-            price: 497,
+            price: (497).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+            numericPrice: 497,
             features: ["Tudo do Plano Profissional", "Domínio Próprio (.com.br)", "Consultoria de SEO", "2 Cartões NFC Inclusos", "Gestão de Leads no Painel"],
             excludedFeatures: [],
             active: true,
@@ -1326,10 +1329,8 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
                   onClick={() => onAddToCart({ 
                     id: plan.id, 
                     name: plan.name, 
-                    price: typeof plan.price === 'number' 
-                      ? plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-                      : plan.price, 
-                    numericPrice: typeof plan.price === 'number' ? plan.price : parseFloat(String(plan.price).replace(/[^\d,]/g, '').replace(',', '.')),
+                    price: (plan.numericPrice || plan.price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), 
+                    numericPrice: plan.numericPrice || (typeof plan.price === 'number' ? plan.price : parseFloat(String(plan.price).replace(/[^\d,]/g, '').replace(',', '.'))),
                     quantity: 1 
                   })}
                   className={`w-full py-4 rounded-xl font-bold transition-all active:scale-95 ${
@@ -1513,21 +1514,7 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
   const [intentError, setIntentError] = useState<string | null>(null);
 
   const total = cart.reduce((acc, item) => {
-    let price = 0;
-    // Standardize price calculation to always handle cents
-    if (typeof item.price === 'number') {
-      // If the number looks like a cent amount (> 1000) or we know it's cents, treat as cents
-      // Otherwise if it's explicitly cents (item.isCents), divide by 100
-      price = item.price / 100;
-    } else if (typeof item.price === 'string') {
-      price = parseFloat(item.price.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-    }
-    
-    // Safety fallback for numericPrice
-    if (!price && item.numericPrice) {
-      price = item.numericPrice;
-    }
-    
+    const price = item.numericPrice || (typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^\d,]/g, '').replace(',', '.'))) || 0;
     return acc + (price * item.quantity);
   }, 0);
 
@@ -1599,7 +1586,8 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
       }
     } catch (error: any) {
       console.error("Stripe pre-fetch error:", error.message);
-      return null;
+      setIntentError(error.message);
+      return { error: error.message };
     } finally {
       setIsIntentLoading(false);
     }
@@ -1622,11 +1610,12 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
     if (clientSecret) {
       setIsCheckoutOpen(true);
     } else {
-      const secret = await handleCreatePaymentIntent(formData);
-      if (secret) {
+      const result = await handleCreatePaymentIntent(formData) as any;
+      if (result && !result.error && typeof result === 'string') {
         setIsCheckoutOpen(true);
       } else {
-        alert("Não foi possível iniciar o pagamento. Por favor, tente novamente ou entre em contato com o suporte.");
+        const detail = result?.error || intentError || "Erro de comunicação";
+        alert(`Não foi possível iniciar o pagamento: ${detail}. Por favor, tente novamente ou entre em contato com o suporte.`);
       }
     }
   };

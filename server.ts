@@ -337,6 +337,8 @@ async function startServer() {
       console.log("[PaymentIntent] Request received:", { email, name, itemsCount: items?.length });
       console.log("[PaymentIntent] Items:", JSON.stringify(items));
 
+      console.log("[PaymentIntent] Received request for:", email, "items:", JSON.stringify(items));
+
       if (!items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ error: "Carrinho vazio ou inválido." });
       }
@@ -365,7 +367,14 @@ async function startServer() {
       }
 
       if (!usedDb) {
-        total = items.reduce((sum, item) => sum + (Number(item.numericPrice) || 0) * (Number(item.quantity) || 1), 0);
+        total = items.reduce((sum, item) => {
+          const price = Number(item.numericPrice);
+          if (isNaN(price)) {
+            console.warn(`[PaymentIntent] Invalid numericPrice for item ${item.id}:`, item.numericPrice);
+            return sum;
+          }
+          return sum + (price * (Number(item.quantity) || 1));
+        }, 0);
       }
 
       console.log("[PaymentIntent] Calculated total (real):", total);

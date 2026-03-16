@@ -1055,7 +1055,7 @@ export const StoreTab = ({ user, setView, onAddToCart }: any) => {
           {
             id: 'default-1',
             name: "Plano Start",
-            price: 9700,
+            price: (97).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
             numericPrice: 97,
             features: ["Card Digital Personalizado", "Link na Bio Profissional", "Suporte via E-mail", "Atualizações Ilimitadas"],
             active: true,
@@ -1065,7 +1065,7 @@ export const StoreTab = ({ user, setView, onAddToCart }: any) => {
           {
             id: 'default-2',
             name: "Plano Profissional + NFC",
-            price: 29700,
+            price: (297).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
             numericPrice: 297,
             features: ["Tudo do Plano Start", "Cartão Físico NFC Incluso", "Envio Grátis para todo Brasil", "PDF Interativo de Bônus", "Suporte Prioritário WhatsApp"],
             active: true,
@@ -1076,7 +1076,7 @@ export const StoreTab = ({ user, setView, onAddToCart }: any) => {
           {
             id: 'default-3',
             name: "Plano Business",
-            price: 49700,
+            price: (497).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
             numericPrice: 497,
             features: ["Tudo do Plano Profissional", "Domínio Próprio (.com.br)", "Consultoria de SEO", "2 Cartões NFC Inclusos", "Gestão de Leads no Painel"],
             active: true,
@@ -1090,7 +1090,7 @@ export const StoreTab = ({ user, setView, onAddToCart }: any) => {
           {
             id: 'default-1',
             name: "Plano Start",
-            price: 9700,
+            price: (97).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
             numericPrice: 97,
             features: ["Card Digital Personalizado", "Link na Bio Profissional", "Suporte via E-mail", "Atualizações Ilimitadas"],
             active: true,
@@ -1100,7 +1100,7 @@ export const StoreTab = ({ user, setView, onAddToCart }: any) => {
           {
             id: 'default-2',
             name: "Plano Profissional + NFC",
-            price: 29700,
+            price: (297).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
             numericPrice: 297,
             features: ["Tudo do Plano Start", "Cartão Físico NFC Incluso", "Envio Grátis para todo Brasil", "PDF Interativo de Bônus", "Suporte Prioritário WhatsApp"],
             active: true,
@@ -1111,7 +1111,7 @@ export const StoreTab = ({ user, setView, onAddToCart }: any) => {
           {
             id: 'default-3',
             name: "Plano Business",
-            price: 49700,
+            price: (497).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
             numericPrice: 497,
             features: ["Tudo do Plano Profissional", "Domínio Próprio (.com.br)", "Consultoria de SEO", "2 Cartões NFC Inclusos", "Gestão de Leads no Painel"],
             active: true,
@@ -1130,8 +1130,8 @@ export const StoreTab = ({ user, setView, onAddToCart }: any) => {
     onAddToCart({
       id: plan.id,
       name: plan.name,
-      price: (plan.numericPrice || plan.price / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-      numericPrice: plan.numericPrice || plan.price / 100,
+      price: plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+      numericPrice: plan.numericPrice,
       image: "189861.jpg", 
       description: plan.name
     });
