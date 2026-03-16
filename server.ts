@@ -472,6 +472,10 @@ async function startServer() {
 
       console.log("[CheckoutSession] Creating session for:", email);
 
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ error: "Carrinho vazio ou inválido." });
+      }
+
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: items.map((item: any) => ({
