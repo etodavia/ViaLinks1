@@ -1623,37 +1623,54 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
 
   const onFinalizeClick = async () => {
     if (!formData.email || !formData.email.includes('@')) {
-      alert("E-mail inválido.");
+      alert("Por favor, insira um e-mail válido.");
       return;
     }
     if (!formData.name || formData.name.length < 3) {
-      alert("Nome incompleto.");
-      return;
-    }
-    if (!formData.zip || !formData.street || !formData.number || !formData.city || !formData.state) {
-      alert("Preencha o endereço completo.");
+      alert("Por favor, insira seu nome completo.");
       return;
     }
     if (!formData.phone || formData.phone.length < 10) {
-      alert("Telefone inválido.");
+      alert("Por favor, insira um telefone válido com DDD.");
       return;
     }
     if (!formData.taxId || formData.taxId.length < 11) {
-      alert("CPF/CNPJ inválido.");
+      alert("Por favor, insira um CPF ou CNPJ válido.");
       return;
     }
 
-    if (!clientSecret) {
-      setIsIntentLoading(true);
-      try {
-        const isAlive = await checkServerHealth();
-        if (!isAlive) throw new Error("Servidor offline (503).");
-        await handleCreatePaymentIntent(formData);
-      } catch (err: any) {
-        alert(err.message);
-      } finally {
-        setIsIntentLoading(false);
+    setIsIntentLoading(true);
+    setIntentError(null);
+
+    try {
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: cart.map(item => ({
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            numericPrice: item.numericPrice
+          })),
+          email: formData.email,
+          name: formData.name,
+          phone: formData.phone,
+          taxId: formData.taxId
+        })
+      });
+
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error || "Erro ao redirecionar para o pagamento.");
       }
+    } catch (err: any) {
+      console.error("Checkout Error:", err);
+      setIntentError(err.message || "Erro de conexão. Certifique-se que o servidor está rodando.");
+    } finally {
+      setIsIntentLoading(false);
     }
   };
 
@@ -1785,13 +1802,15 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
                     <button 
                       onClick={onFinalizeClick}
                       disabled={isIntentLoading}
-                      className="w-full bg-vialinks-orange text-white py-5 rounded-2xl font-black text-xl shadow-lg shadow-vialinks-orange/20 flex items-center justify-center gap-3"
+                      className="w-full bg-vialinks-orange text-white py-5 rounded-2xl font-black text-xl shadow-lg shadow-vialinks-orange/20 flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all"
                     >
-                      {isIntentLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <>PROSSEGUIR PARA PAGAMENTO <ArrowRight className="w-6 h-6" /></>}
+                      {isIntentLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <>PAGAR NO STRIPE AGORA <ArrowRight className="w-6 h-6" /></>}
                     </button>
-                    {intentError && <p className="text-red-500 text-sm text-center font-bold italic">{intentError}</p>}
-                    <div className="opacity-30 grayscale flex justify-center gap-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                      <span>Cartão de Crédito</span>
+                    {intentError && <p className="text-red-500 text-sm text-center font-bold">{intentError}</p>}
+                    <div className="flex justify-center items-center gap-4 opacity-70 grayscale-0 px-4">
+                      <img src="https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg" alt="Stripe" className="h-6" />
+                      <div className="h-4 w-px bg-slate-200" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Pagamento 100% Seguro</span>
                     </div>
                   </div>
                 )}

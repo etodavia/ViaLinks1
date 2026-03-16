@@ -464,6 +464,45 @@ async function startServer() {
     }
   });
 
+  // Stripe Checkout Session (Robust Hosted Method)
+  app.post("/api/create-checkout-session", async (req, res) => {
+    try {
+      const { items, email, name, phone, taxId } = req.body;
+      const stripe = await getStripe();
+
+      console.log("[CheckoutSession] Creating session for:", email);
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: items.map((item: any) => ({
+          price_data: {
+            currency: 'brl',
+            product_data: {
+              name: item.name,
+              metadata: { id: item.id }
+            },
+            unit_amount: Math.round((item.numericPrice || 0) * 100),
+          },
+          quantity: item.quantity,
+        })),
+        mode: 'payment',
+        customer_email: email,
+        success_url: `${process.env.APP_URL || 'http://localhost:3333'}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.APP_URL || 'http://localhost:3333'}/?view=checkout`,
+        metadata: {
+          customerName: name || "",
+          customerPhone: phone || "",
+          taxId: taxId || ""
+        }
+      });
+
+      res.json({ url: session.url });
+    } catch (error: any) {
+      console.error("[CheckoutSession] Error:", error.message);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Verify Purchase
   app.get("/api/checkout/verify", async (req, res) => {
     const { session_id, payment_intent } = req.query;
