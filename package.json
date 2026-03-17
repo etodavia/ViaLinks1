@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "start": "node server.js",
-    "build": "vite build && tsc server.ts --target esnext --module esnext --moduleResolution node --allowJs --skipLibCheck --outDir . --esModuleInterop --noEmit false && tsc services/stripeService.ts --target esnext --module esnext --moduleResolution node --allowJs --skipLibCheck --outDir services --esModuleInterop --noEmit false",
+    "build": "vite build && npx tsc server.ts --target esnext --module esnext --moduleResolution node --allowJs --skipLibCheck --outDir . --esModuleInterop --noEmit false",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"

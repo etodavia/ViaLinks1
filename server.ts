@@ -7,7 +7,7 @@ import cookieParser from "cookie-parser";
 import Stripe from "stripe";
 import admin from "firebase-admin";
 import { readFileSync } from "node:fs";
-import { StripeService } from "./services/stripeService.ts";
+import { StripeService } from "./services/stripeService";
 import nodemailer from "nodemailer";
 import crypto from "node:crypto";
 import { appendFileSync } from "node:fs";
