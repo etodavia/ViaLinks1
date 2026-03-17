@@ -4,8 +4,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { loadStripe } from '@stripe/stripe-js';
-import { Elements } from '@stripe/react-stripe-js';
-import { CheckoutForm } from './components/CheckoutForm';
+// Stripping out custom Elements logic in favor of Hosted Checkout
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || "pk_live_51RXxToAzbUVU35SS3NPa5nDspCqjSon0vWQ6OMs0yRC0LZx0VuS99BiKCleNAZnqS9lr3LJUWI2BbeJdVT0CNgSt00LenAPkI8");
 
@@ -1546,68 +1545,9 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  useEffect(() => {
-    if (user?.email && user?.displayName && cart.length > 0) {
-      handleCreatePaymentIntent({ email: user.email, name: user.displayName });
-    }
-  }, [user, cart]);
+  // Removed local PaymentIntent creation - we will use Hosted Checkout Session instead
 
-  const handleCreatePaymentIntent = async (data: any) => {
-    if (!data.email) return null;
-    setIsIntentLoading(true);
-    setIntentError(null);
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-      const response = await fetch('/api/create-payment-intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({
-          items: cart.map(item => ({
-            id: item.id,
-            quantity: item.quantity,
-            numericPrice: item.numericPrice
-          })),
-          email: data.email,
-          name: data.name,
-          phone: data.phone,
-          taxId: data.taxId
-        })
-      });
-
-      clearTimeout(timeoutId);
-
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await response.text();
-        let message = "O servidor retornou um formato inesperado.";
-        if (text.includes('<title>')) {
-          const match = text.match(/<title>([^<]*)<\/title>/);
-          if (match) message += ` Erro: ${match[1]}`;
-        }
-        throw new Error(`${message} (Status: ${response.status})`);
-      }
-
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || `Erro do servidor (${response.status})`);
-      
-      if (result.clientSecret) {
-        setClientSecret(result.clientSecret);
-        return result.clientSecret;
-      } else {
-        throw new Error(result.error || "Erro ao criar intenção de pagamento");
-      }
-    } catch (error: any) {
-      console.error("Stripe error:", error);
-      const detail = error.name === 'AbortError' ? "Tempo de conexão esgotado." : error.message;
-      setIntentError(detail);
-      return { error: detail };
-    } finally {
-      setIsIntentLoading(false);
-    }
-  };
+  // Removed handleCreatePaymentIntent
 
   const checkServerHealth = async () => {
     try {
@@ -1738,7 +1678,7 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-vialinks-purple outline-none"
                       value={formData.email}
                       onChange={e => setFormData({...formData, email: e.target.value})}
-                      onBlur={() => { if (formData.email.includes('@') && formData.name) handleCreatePaymentIntent(formData); }}
+                      onBlur={() => { /* No-op: Hosted Checkout handles session on final click */ }}
                     />
                   </div>
                 </div>
@@ -1793,27 +1733,21 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
                 <h3 className="font-bold text-slate-800">Pagamento</h3>
               </div>
               <div className="p-6">
-                {clientSecret ? (
-                  <Elements stripe={stripePromise} options={{ clientSecret, appearance: { ...STRIPE_APPEARANCE, theme: 'flat' } }}>
-                    <CheckoutForm clientSecret={clientSecret} amount={total} onCancel={() => setClientSecret(null)} />
-                  </Elements>
-                ) : (
-                  <div className="space-y-4">
-                    <button 
-                      onClick={onFinalizeClick}
-                      disabled={isIntentLoading}
-                      className="w-full bg-vialinks-orange text-white py-5 rounded-2xl font-black text-xl shadow-lg shadow-vialinks-orange/20 flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all"
-                    >
-                      {isIntentLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <>PAGAR NO STRIPE AGORA <ArrowRight className="w-6 h-6" /></>}
-                    </button>
-                    {intentError && <p className="text-red-500 text-sm text-center font-bold">{intentError}</p>}
-                    <div className="flex justify-center items-center gap-4 opacity-70 grayscale-0 px-4">
-                      <img src="https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg" alt="Stripe" className="h-6" />
-                      <div className="h-4 w-px bg-slate-200" />
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Pagamento 100% Seguro</span>
-                    </div>
+                <div className="space-y-4">
+                  <button 
+                    onClick={onFinalizeClick}
+                    disabled={isIntentLoading}
+                    className="w-full bg-vialinks-orange text-white py-5 rounded-2xl font-black text-xl shadow-lg shadow-vialinks-orange/20 flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  >
+                    {isIntentLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <>PAGAR NO STRIPE AGORA <ArrowRight className="w-6 h-6" /></>}
+                  </button>
+                  {intentError && <p className="text-red-500 text-sm text-center font-bold font-mono p-4 bg-red-50 rounded-lg">{intentError}</p>}
+                  <div className="flex justify-center items-center gap-4 opacity-70 grayscale-0 px-4">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg" alt="Stripe" className="h-6" />
+                    <div className="h-4 w-px bg-slate-200" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Pagamento 100% Seguro</span>
                   </div>
-                )}
+                </div>
               </div>
             </div>
           </div>
