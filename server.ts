@@ -1,15 +1,15 @@
 import "dotenv/config";
 import express from "express";
 import { createServer as createViteServer } from "vite";
-import path from "path";
-import { fileURLToPath } from "url";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import cookieParser from "cookie-parser";
 import Stripe from "stripe";
 import admin from "firebase-admin";
-import { readFileSync } from "fs";
+import { readFileSync } from "node:fs";
 import { StripeService } from "./services/stripeService.js";
 import nodemailer from "nodemailer";
-import crypto from "crypto";
+import crypto from "node:crypto";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
