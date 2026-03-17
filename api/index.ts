@@ -8,7 +8,7 @@ export default async function handler(req: any, res: any) {
     console.error("Vercel Function Initialization Error:", err);
     res.status(500).json({
       error: "Erro na inicialização do servidor (Vercel)",
-      message: err.message,
+      message: `[V3] ${err.message}`,
       stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
       hint: "Verifique se todas as variáveis de ambiente (STRIPE_SECRET_KEY, FIREBASE_CONFIG) estão configuradas no dashboard da Vercel."
     });
