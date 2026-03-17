@@ -1,0 +1,250 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields:
+    //   - email: string (required)
+    //   - role: string (required, 'admin' | 'client')
+    //   - displayName: string (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: sales
+    // Fields:
+    //   - userId: string (required)
+    //   - amount: number (required)
+    //   - status: string (required)
+    //   - stripeSessionId: string (optional)
+    //   - items: list (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: briefings
+    // Fields:
+    //   - userId: string (required)
+    //   - data: map (required)
+    //   - updatedAt: timestamp (required)
+    //
+    // Collection: links
+    // Fields:
+    //   - userId: string (required)
+    //   - title: string (required)
+    //   - url: string (required)
+    //   - icon: string (optional)
+    //   - order: int (optional)
+    //
+    // Collection: products
+    // Fields:
+    //   - name: string (required)
+    //   - description: string (optional)
+    //   - price: number (required)
+    //   - imageUrl: string (optional)
+    //   - category: string (optional)
+    //   - stock: int (optional)
+    //   - active: bool (required)
+    //   - createdAt: timestamp (optional)
+    //
+    // Collection: orders
+    // Fields:
+    //   - userId: string (required)
+    //   - customerEmail: string (optional)
+    //   - items: list (required)
+    //   - totalAmount: number (required)
+    //   - status: string (required, 'pending' | 'paid' | 'shipped' | 'cancelled')
+    //   - createdAt: timestamp (optional)
+    //
+    // Collection: plans
+    // Fields:
+    //   - name: string (required)
+    //   - price: number (required)
+    //   - features: list (optional)
+    //   - active: bool (required)
+    //   - order: int (optional)
+    //
+    // Collection: config
+    // Fields:
+    //   - type: string (required, 'payment' | 'smtp')
+    //   - settings: map (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "equipeetodavia@gmail.com" && request.auth.token.email_verified == true) ||
+          (request.auth.token.email == "contato@agenciaetodavia.com.br" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'role', 'createdAt']) &&
+             data.email is string &&
+             data.role in ['admin', 'client'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidSale(data) {
+      return data.keys().hasAll(['userId', 'amount', 'status', 'createdAt']) &&
+             data.userId is string &&
+             data.amount is number &&
+             data.status is string &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidBriefing(data) {
+      return data.keys().hasAll(['userId', 'data', 'updatedAt']) &&
+             data.userId is string &&
+             data.data is map &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidLink(data) {
+      return data.keys().hasAll(['userId', 'title', 'url']) &&
+             data.userId is string &&
+             data.title is string &&
+             data.url is string;
+    }
+
+    function isValidProduct(data) {
+      return data.keys().hasAll(['name', 'price', 'active']) &&
+             data.name is string &&
+             data.price is number &&
+             data.active is bool;
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll(['userId', 'items', 'totalAmount', 'status']) &&
+             data.userId is string &&
+             data.items is list &&
+             data.totalAmount is number &&
+             data.status in ['pending', 'paid', 'shipped', 'cancelled'];
+    }
+
+    function isValidPlan(data) {
+      return data.keys().hasAll(['name', 'price', 'active']) &&
+             data.name is string &&
+             data.price is number &&
+             data.active is bool;
+    }
+
+    function isValidConfig(data) {
+      return data.keys().hasAll(['type', 'settings']) &&
+             data.type in ['payment', 'smtp'] &&
+             data.settings is map;
+    }
+
+    function isValidTestimonial(data) {
+      return data.keys().hasAll(['userId', 'userName', 'text', 'status']) &&
+             data.userId is string &&
+             data.userName is string &&
+             data.text is string &&
+             data.status in ['pending', 'approved', 'rejected'];
+    }
+
+    function isValidDelivery(data) {
+      return data.keys().hasAll(['userId', 'status']) &&
+             data.userId is string &&
+             data.status in ['pending', 'production', 'shipped', 'delivered'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    (isOwner(userId) && request.resource.data.role == 'client' || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    ((isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /sales/{saleId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidSale(request.resource.data) && 
+                    (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /briefings/{briefingId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidBriefing(request.resource.data) && 
+                    (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow update: if isAuthenticated() && isValidBriefing(request.resource.data) && 
+                    (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /links/{linkId} {
+      allow read: if true; // Links are public for the card view
+      allow create: if isAuthenticated() && isValidLink(request.resource.data) && 
+                    (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow update: if isAuthenticated() && isValidLink(request.resource.data) && 
+                    (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /products/{productId} {
+      allow read: if true; // Products are public for the store view
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /orders/{orderId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidOrder(request.resource.data) && 
+                    (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /plans/{planId} {
+      allow read: if true; // Plans are public
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /config/{configId} {
+      allow read: if isAdmin() || configId in ['content', 'tags'];
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /testimonials/{testimonialId} {
+      allow read: if resource.data.status == 'approved' || (isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()));
+      allow create: if isAuthenticated() && isValidTestimonial(request.resource.data) && 
+                    request.resource.data.userId == request.auth.uid &&
+                    request.resource.data.status == 'pending';
+      allow update: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid && 
+                    isValidTestimonial(request.resource.data) &&
+                    request.resource.data.status == 'pending' &&
+                    request.resource.data.userId == resource.data.userId);
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+    }
+
+    match /deliveries/{deliveryId} {
+      allow read: if isAuthenticated() && (deliveryId == request.auth.uid || isAdmin());
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+  }
+}
