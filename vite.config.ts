@@ -26,5 +26,18 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    build: {
+      chunkSizeWarningLimit: 1000,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom'],
+            animations: ['gsap'],
+            firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+            stripe: ['@stripe/stripe-js', '@stripe/react-stripe-js'],
+          },
+        },
+      },
+    },
   };
 });

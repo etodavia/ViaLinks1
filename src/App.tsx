@@ -7,7 +7,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import { CheckoutForm } from './components/CheckoutForm';
 
-const stripePromise = loadStripe("pk_live_51RXxToAzbUVU35SS3NPa5nDspCqjSon0vWQ6OMs0yRC0LZx0VuS99BiKCleNAZnqS9lr3LJUWI2BbeJdVT0CNgSt00LenAPkI8");
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || "pk_live_51RXxToAzbUVU35SS3NPa5nDspCqjSon0vWQ6OMs0yRC0LZx0VuS99BiKCleNAZnqS9lr3LJUWI2BbeJdVT0CNgSt00LenAPkI8");
 
 const STRIPE_APPEARANCE: any = {
   theme: 'night',

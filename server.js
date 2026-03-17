@@ -10,7 +10,16 @@ import { readFileSync } from "node:fs";
 import { StripeService } from "./services/stripeService.js";
 import nodemailer from "nodemailer";
 import crypto from "node:crypto";
+import { appendFileSync } from "node:fs";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// CRITICAL: Immediate startup log to a file to verify execution on Hostinger
+try {
+    const startupMsg = `\n[${new Date().toISOString()}] STARTUP ATTEMPT: Node ${process.version}, CWD: ${process.cwd()}, ENV: ${process.env.NODE_ENV}\n`;
+    appendFileSync(path.join(process.cwd(), 'startup_log.txt'), startupMsg);
+}
+catch (e) {
+    console.error("Failed to write to startup_log.txt", e);
+}
 // Global error handlers to prevent silent crashes
 process.on('unhandledRejection', (reason, promise) => {
     console.error('[Process] Unhandled Rejection at:', promise, 'reason:', reason);
@@ -21,10 +30,26 @@ process.on('uncaughtException', (error) => {
 });
 async function startServer() {
     const app = express();
+    // Default to production if not explicitly set and not on localhost
+    if (!process.env.NODE_ENV && !process.env.APP_URL?.includes('localhost')) {
+        process.env.NODE_ENV = 'production';
+    }
     const PORT = process.env.PORT || 3000;
     console.log("Starting server with NODE_ENV:", process.env.NODE_ENV);
-    console.log("APP_URL configured as:", process.env.APP_URL || `http://localhost:${PORT} (default)`);
     console.log("PORT listening on:", PORT);
+    // Health check MUST be early and independent of DB to survive crashes
+    app.get("/api/health", (req, res) => {
+        res.json({
+            status: "ok",
+            env: process.env.NODE_ENV,
+            node: process.version,
+            uptime: process.uptime(),
+            timestamp: new Date().toISOString()
+        });
+    });
+    app.get("/api/ping", (req, res) => {
+        res.json({ pong: true, time: new Date().toISOString() });
+    });
     console.log("Stripe Secret Key present in ENV:", !!process.env.STRIPE_SECRET_KEY);
     if (process.env.STRIPE_SECRET_KEY) {
         console.log("Stripe Secret Key starts with:", process.env.STRIPE_SECRET_KEY.substring(0, 7));
@@ -527,6 +552,11 @@ async function startServer() {
     });
 }
 startServer().catch(err => {
-    console.error("Failed to start server:", err);
+    const errMsg = `[${new Date().toISOString()}] CRITICAL STARTUP ERROR: ${err.message}\n${err.stack}\n`;
+    console.error(errMsg);
+    try {
+        appendFileSync(path.join(process.cwd(), 'startup_log.txt'), errMsg);
+    }
+    catch (e) { }
     process.exit(1);
 });
