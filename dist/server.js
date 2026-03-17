@@ -21,7 +21,9 @@ process.on('uncaughtException', (error) => {
 });
 async function startServer() {
     const app = express();
-    const PORT = Number(process.env.PORT) || 3001;
+    const PORT = Number(process.env.PORT) || 3000;
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT);
     console.log("Starting server with NODE_ENV:", process.env.NODE_ENV);
     console.log("APP_URL configured as:", process.env.APP_URL || "http://localhost:3000 (default)");
     console.log("Stripe Secret Key present in ENV:", !!process.env.STRIPE_SECRET_KEY);
