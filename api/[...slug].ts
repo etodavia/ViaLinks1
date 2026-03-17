@@ -1,4 +1,4 @@
-import { createApp } from "../server.js";
+import { createApp } from "../server";
 
 export default async function handler(req: any, res: any) {
   try {

@@ -7,7 +7,7 @@ import cookieParser from "cookie-parser";
 import Stripe from "stripe";
 import admin from "firebase-admin";
 import { readFileSync } from "node:fs";
-import { StripeService } from "./services/stripeService.js";
+import { StripeService } from "./services/stripeService";
 import nodemailer from "nodemailer";
 import crypto from "node:crypto";
 import { appendFileSync } from "node:fs";
@@ -262,7 +262,7 @@ export async function createApp() {
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({ server: { middlewareMode: true }, appType: "spa" });
     app.use(vite.middlewares);
-  } else {
+  } else if (!process.env.VERCEL) {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));

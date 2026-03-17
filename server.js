@@ -7,19 +7,12 @@ import cookieParser from "cookie-parser";
 import Stripe from "stripe";
 import admin from "firebase-admin";
 import { readFileSync } from "node:fs";
-import { StripeService } from "./services/stripeService";
+import { StripeService } from "./services/stripeService.js";
 import nodemailer from "nodemailer";
 import crypto from "node:crypto";
-import { appendFileSync } from "node:fs";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// CRITICAL: Immediate startup log to a file to verify execution on Hostinger
-try {
-    const startupMsg = `\n[${new Date().toISOString()}] STARTUP ATTEMPT: Node ${process.version}, CWD: ${process.cwd()}, ENV: ${process.env.NODE_ENV}\n`;
-    appendFileSync(path.join(process.cwd(), 'startup_log.txt'), startupMsg);
-}
-catch (e) {
-    console.error("Failed to write to startup_log.txt", e);
-}
+// CRITICAL: Startup log (console only for Vercel compatibility)
+console.log(`[${new Date().toISOString()}] STARTUP ATTEMPT: Node ${process.version}, CWD: ${process.cwd()}, ENV: ${process.env.NODE_ENV}`);
 // Global error handlers to prevent silent crashes
 process.on('unhandledRejection', (reason, promise) => {
     console.error('[Process] Unhandled Rejection at:', promise, 'reason:', reason);
@@ -301,12 +294,7 @@ if (import.meta.url === `file://${fileURLToPath(import.meta.url)}` || process.en
             console.log(`Server running on port ${PORT}`);
         });
     }).catch(err => {
-        const errMsg = `[${new Date().toISOString()}] CRITICAL STARTUP ERROR: ${err.message}\n${err.stack}\n`;
-        console.error(errMsg);
-        try {
-            appendFileSync(path.join(process.cwd(), 'startup_log.txt'), errMsg);
-        }
-        catch (e) { }
+        console.error(`[${new Date().toISOString()}] CRITICAL STARTUP ERROR:`, err);
         process.exit(1);
     });
 }
