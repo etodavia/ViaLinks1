@@ -279,11 +279,7 @@ if (import.meta.url === `file://${fileURLToPath(import.meta.url)}` || process.en
       console.log(`Server running on port ${PORT}`);
     });
   }).catch(err => {
-    const errMsg = `[${new Date().toISOString()}] CRITICAL STARTUP ERROR: ${err.message}\n${err.stack}\n`;
-    console.error(errMsg);
-    try {
-      appendFileSync(path.join(process.cwd(), 'startup_log.txt'), errMsg);
-    } catch (e) {}
+    console.error(`[${new Date().toISOString()}] CRITICAL STARTUP ERROR:`, err);
     process.exit(1);
   });
 }
