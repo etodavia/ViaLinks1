@@ -25,9 +25,9 @@ process.on('uncaughtException', (error) => {
 
 async function startServer() {
   const app = express();
-  const PORT = Number(process.env.PORT) || 3001;
+  const PORT = process.env.PORT || 3000;
   console.log("Starting server with NODE_ENV:", process.env.NODE_ENV);
-  console.log("APP_URL configured as:", process.env.APP_URL || "http://localhost:3001 (default)");
+  console.log("APP_URL configured as:", process.env.APP_URL || `http://localhost:${PORT} (default)`);
   console.log("PORT listening on:", PORT);
   console.log("Stripe Secret Key present in ENV:", !!process.env.STRIPE_SECRET_KEY);
   if (process.env.STRIPE_SECRET_KEY) {
@@ -570,8 +570,8 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
   });
 }
 
