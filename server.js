@@ -90,6 +90,11 @@ export async function createApp() {
     };
     // --- API ROUTER ---
     const apiRouter = express.Router();
+    // Log all requests reaching the API router
+    apiRouter.use((req, res, next) => {
+        console.log(`[API Router] Method: ${req.method}, URL: ${req.url}`);
+        next();
+    });
     // 1. Webhook (Must be before JSON parse)
     apiRouter.post("/webhook", express.raw({ type: 'application/json' }), async (req, res) => {
         const sig = req.headers['stripe-signature'];
@@ -279,7 +284,7 @@ export async function createApp() {
         const vite = await createViteServer({ server: { middlewareMode: true }, appType: "spa" });
         app.use(vite.middlewares);
     }
-    else {
+    else if (!process.env.VERCEL) {
         const distPath = path.join(process.cwd(), 'dist');
         app.use(express.static(distPath));
         app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));

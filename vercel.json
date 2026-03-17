@@ -1,9 +1,9 @@
 {
   "version": 2,
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    { "source": "/api/create-checkout-session", "destination": "/api/create-checkout-session.ts" },
+    { "source": "/api/webhook", "destination": "/api/webhook.ts" },
+    { "source": "/api/(.*)", "destination": "/api/index.ts" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
