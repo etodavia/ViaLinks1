@@ -157,7 +157,7 @@ export default async function handler(req: any, res: any) {
           const plans = plansDoc.data()?.plans || [];
           for (const item of items) {
             const plan = plans.find((p: any) => p.id === item.id);
-            if (plan) total += (plan.numericPrice || plan.price) * (item.quantity || 1);
+            if (plan) total += (parsePrice(plan.numericPrice || plan.price)) * (item.quantity || 1);
           }
         } catch (e) {}
       }
