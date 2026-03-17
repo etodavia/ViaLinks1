@@ -61,6 +61,14 @@ export async function createApp() {
     return stripeClient;
   };
 
+  const parsePrice = (price: any): number => {
+    if (typeof price === 'number') return price;
+    if (!price) return 0;
+    const cleaned = String(price).replace(/[^\d.,]/g, '').replace(',', '.');
+    const parsed = parseFloat(cleaned);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
   // --- API ROUTES ---
   const apiRouter = express.Router();
 
@@ -124,14 +132,18 @@ export async function createApp() {
       const stripe = await getStripe();
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
-        line_items: items.map((item: any) => ({
-          price_data: {
-            currency: 'brl',
-            product_data: { name: item.name },
-            unit_amount: Math.round(item.numericPrice * 100)
-          },
-          quantity: item.quantity
-        })),
+        line_items: items.map((item: any) => {
+          const unitAmount = Math.round(parsePrice(item.numericPrice || item.price) * 100);
+          if (unitAmount <= 0) throw new Error(`Preço inválido para o item: ${item.name}`);
+          return {
+            price_data: {
+              currency: 'brl',
+              product_data: { name: item.name },
+              unit_amount: unitAmount
+            },
+            quantity: item.quantity || 1
+          };
+        }),
         mode: 'payment',
         customer_email: email,
         success_url: `${process.env.APP_URL}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
@@ -140,7 +152,8 @@ export async function createApp() {
       });
       res.json({ url: session.url });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error("[API] Checkout Error:", error);
+      res.status(500).json({ error: "Checkout Failed", message: error.message });
     }
   });
 
@@ -156,16 +169,18 @@ export async function createApp() {
           const plans = plansDoc.data()?.plans || [];
           for (const item of items) {
             const plan = plans.find((p: any) => p.id === item.id);
-            if (plan) total += (plan.numericPrice || plan.price) * (item.quantity || 1);
+            if (plan) total += (parsePrice(plan.numericPrice || plan.price)) * (item.quantity || 1);
           }
         } catch (e) {
-          console.warn("[API] Failed to fetch plans from Firestore for amount calculation");
+          console.warn("[API] Failed to fetch plans from Firestore for amount calculation:", e);
         }
       }
 
-      if (total === 0) {
-        total = items.reduce((sum: number, item: any) => sum + (Number(item.numericPrice) * (item.quantity || 1)), 0);
+      if (total <= 0) {
+        total = items.reduce((sum: number, item: any) => sum + (parsePrice(item.numericPrice || item.price) * (item.quantity || 1)), 0);
       }
+
+      if (total <= 0) throw new Error("O valor total do pedido deve ser maior que zero.");
 
       const stripe = await getStripe();
       const paymentIntent = await stripe.paymentIntents.create({
@@ -193,7 +208,7 @@ export async function createApp() {
       res.json({ clientSecret: paymentIntent.client_secret });
     } catch (error: any) {
       console.error("[API] PaymentIntent Error:", error.message);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: "Checkout Failed", message: error.message });
     }
   });
 

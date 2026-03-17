@@ -1607,7 +1607,7 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
         setClientSecret(data.clientSecret);
       } else {
         // Fallback to Hosted Checkout if PaymentIntent fails (e.g. key mismatch)
-        console.warn("Falling back to Hosted Checkout Session...");
+        console.warn("Falling back to Hosted Checkout Session... Error:", data.message || data.error);
         const sessionResponse = await fetch('/api/create-checkout-session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1628,12 +1628,12 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
         if (sessionData.url) {
           window.location.href = sessionData.url;
         } else {
-          throw new Error(sessionData.error || "Erro ao iniciar o pagamento.");
+          throw new Error(sessionData.message || sessionData.error || "Erro ao iniciar o pagamento.");
         }
       }
     } catch (err: any) {
       console.error("Checkout Error:", err);
-      setIntentError(err.message || "Erro de conexão. Certifique-se que o servidor está rodando.");
+      setIntentError(err.message || "Erro de conexão. Verifique o console para mais detalhes.");
     } finally {
       setIsIntentLoading(false);
     }

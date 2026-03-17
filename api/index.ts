@@ -27,8 +27,16 @@ async function getStripe(db: admin.firestore.Firestore | null) {
       console.error("[Lite] Failed Stripe key fetch:", err);
     }
   }
-  if (!key) throw new Error("Missing Stripe Key");
+  if (!key) throw new Error("Missing Stripe Secret Key");
   return new Stripe(key.trim(), { apiVersion: '2025-01-27' as any });
+}
+
+function parsePrice(price: any): number {
+  if (typeof price === 'number') return price;
+  if (!price) return 0;
+  const cleaned = String(price).replace(/[^\d.,]/g, '').replace(',', '.');
+  const parsed = parseFloat(cleaned);
+  return isNaN(parsed) ? 0 : parsed;
 }
 
 export default async function handler(req: any, res: any) {
@@ -108,14 +116,18 @@ export default async function handler(req: any, res: any) {
 
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
-        line_items: items.map((item: any) => ({
-          price_data: {
-            currency: 'brl',
-            product_data: { name: item.name },
-            unit_amount: Math.round(item.numericPrice * 100)
-          },
-          quantity: item.quantity
-        })),
+        line_items: items.map((item: any) => {
+          const unitAmount = Math.round(parsePrice(item.numericPrice || item.price) * 100);
+          if (unitAmount <= 0) throw new Error(`Preço inválido para o item: ${item.name}`);
+          return {
+            price_data: {
+              currency: 'brl',
+              product_data: { name: item.name },
+              unit_amount: unitAmount
+            },
+            quantity: item.quantity || 1
+          };
+        }),
         mode: 'payment',
         customer_email: email,
         success_url: `${process.env.APP_URL}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
@@ -150,9 +162,11 @@ export default async function handler(req: any, res: any) {
         } catch (e) {}
       }
 
-      if (total === 0) {
-        total = items.reduce((sum: number, item: any) => sum + (Number(item.numericPrice) * (item.quantity || 1)), 0);
+      if (total <= 0) {
+        total = items.reduce((sum: number, item: any) => sum + (parsePrice(item.numericPrice || item.price) * (item.quantity || 1)), 0);
       }
+
+      if (total <= 0) throw new Error("O valor total do pedido deve ser maior que zero.");
 
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(total * 100),
