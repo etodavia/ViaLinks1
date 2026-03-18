@@ -24,7 +24,7 @@
   }
   .vialinks-main-bg {
     background: radial-gradient(circle at 50% -20%, #4D108A 0%, #1A0A33 60%, #000000 100%);
-    background-attachment: fixed;
+    background-attachment: scroll; /* 'fixed' is broken on iOS/Android - causes invisible content */
     position: relative;
   }
   .scrollbar-hide::-webkit-scrollbar {

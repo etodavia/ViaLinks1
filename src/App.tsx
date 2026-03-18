@@ -1244,7 +1244,7 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
   }, []);
 
   return (
-    <section id="planos" className="py-24 relative overflow-hidden">
+    <section id="planos" className="py-24 relative">
       {/* Seamless background */}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -1263,14 +1263,13 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
               <motion.div
                 key={plan.id}
                 initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1, duration: 0.5 }}
                 className={`relative p-8 rounded-3xl border ${
                   plan.popular 
-                    ? 'border-vialinks-purple bg-vialinks-purple text-white shadow-2xl shadow-vialinks-purple/20 md:scale-105 z-10' 
+                    ? 'border-vialinks-purple bg-vialinks-purple text-white shadow-2xl shadow-vialinks-purple/20 z-10' 
                     : 'border-white/10 bg-white/5 backdrop-blur-md text-white hover:border-white/20'
-                } flex flex-col transition-all duration-300 mb-8 md:mb-0`}
+                } flex flex-col transition-all duration-300`}
               >
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-vialinks-orange text-white text-xs font-bold px-4 py-1 rounded-full uppercase tracking-widest">

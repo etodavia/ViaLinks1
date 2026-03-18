@@ -55,7 +55,8 @@ import {
   Truck,
   ShoppingCart,
   ArrowLeft,
-  Lock
+  Lock,
+  Menu
 } from "lucide-react";
 import { FirebaseImage } from "./FirebaseImage";
 import { auth, db, storage } from "../firebase";
@@ -634,6 +635,8 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
     return <PaymentGate user={user} setView={setView} onPaid={() => { setHasPaid(true); setHasActiveOrders(true); setActiveTab('overview'); }} />;
   }
 
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   const handleCompleteOnboarding = async () => {
     try {
       await updateDoc(doc(db, "users", user.uid), {
@@ -646,12 +649,132 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
     }
   };
 
+  const NavContent = () => (
+    <>
+      <div className="flex items-center gap-2 mb-12">
+        <Zap className="text-vialinks-orange w-8 h-8" />
+        <span className="text-2xl font-bold text-white">ViaLinks</span>
+      </div>
+
+      <nav className="flex flex-col gap-2">
+        <button 
+          onClick={() => { (hasActiveOrders || user.role === 'admin') && setActiveTab('overview'); setIsMobileMenuOpen(false); }}
+          disabled={!hasActiveOrders && user.role !== 'admin'}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'overview' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'} ${(!hasActiveOrders && user.role !== 'admin') ? 'opacity-30 cursor-not-allowed' : ''}`}
+        >
+          <LayoutDashboard className="w-5 h-5" /> Visão Geral
+        </button>
+        <button 
+          onClick={() => { (hasActiveOrders || user.role === 'admin') && setActiveTab('briefing'); setIsMobileMenuOpen(false); }}
+          disabled={!hasActiveOrders && user.role !== 'admin'}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'briefing' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'} ${(!hasActiveOrders && user.role !== 'admin') ? 'opacity-30 cursor-not-allowed' : ''}`}
+        >
+          <ClipboardList className="w-5 h-5" /> Formulário Briefing
+        </button>
+        <button 
+          onClick={() => { setActiveTab((!hasActiveOrders && user.role !== 'admin') ? 'store' : 'orders'); setIsMobileMenuOpen(false); }}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${(activeTab === 'orders' || activeTab === 'store') ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+        >
+          <ShoppingBag className="w-5 h-5" /> {(!hasActiveOrders && user.role !== 'admin') ? 'Planos e Preços' : 'Meus Pedidos'}
+        </button>
+        <button 
+          onClick={() => { (hasActiveOrders || user.role === 'admin') && setActiveTab('delivery'); setIsMobileMenuOpen(false); }}
+          disabled={!hasActiveOrders && user.role !== 'admin'}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'delivery' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'} ${(!hasActiveOrders && user.role !== 'admin') ? 'opacity-30 cursor-not-allowed' : ''}`}
+        >
+          <Package className="w-5 h-5" /> Entrega e Card
+        </button>
+        {(hasActiveOrders || user.role === 'admin') && (
+          <button 
+            onClick={() => { setActiveTab('testimonial'); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'testimonial' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+          >
+            <MessageSquare className="w-5 h-5" /> Depoimento
+          </button>
+        )}
+        <button 
+          onClick={() => { setActiveTab('config'); setIsMobileMenuOpen(false); }}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'config' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+        >
+          <Settings className="w-5 h-5" /> Configurações
+        </button>
+        {user.role === 'admin' && (
+          <button 
+            onClick={() => { setView('admin'); setIsMobileMenuOpen(false); }}
+            className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all bg-vialinks-orange/20 text-vialinks-orange hover:bg-vialinks-orange/30 mt-4"
+          >
+            <ShieldCheck className="w-5 h-5" /> Painel Admin
+          </button>
+        )}
+      </nav>
+
+      <div className="mt-auto pt-6 border-t border-white/10">
+        <div className="flex items-center gap-3 px-4 mb-6">
+          <div className="w-10 h-10 rounded-full bg-vialinks-orange flex items-center justify-center text-white font-bold">
+            {user.email?.[0].toUpperCase()}
+          </div>
+          <div className="overflow-hidden text-left">
+            <p className="text-sm font-bold text-white truncate">{user.email}</p>
+            <p className="text-xs text-white/40">{user.role === 'admin' ? 'Administrador' : 'Cliente'}</p>
+          </div>
+        </div>
+        <button 
+          onClick={onLogout}
+          className="flex items-center gap-3 px-4 py-3 w-full text-white/60 hover:text-white transition-all"
+        >
+          <LogOut className="w-5 h-5" /> Sair da Conta
+        </button>
+      </div>
+    </>
+  );
+
   return (
     <ErrorBoundary>
-      <div className="flex min-h-screen bg-white">
+      <div className="flex min-h-screen bg-slate-50 flex-col lg:flex-row">
         {showOnboarding && <OnboardingTutorial user={user} onComplete={handleCompleteOnboarding} />}
-        {/* Sidebar */}
-        <div className="w-80 relative overflow-hidden flex flex-col no-print">
+        
+        {/* Mobile Header */}
+        <div className="lg:hidden flex items-center justify-between p-4 bg-vialinks-purple text-white shadow-md z-[50]">
+          <div className="flex items-center gap-2">
+            <Zap className="text-vialinks-orange w-6 h-6" />
+            <span className="text-xl font-bold">ViaLinks</span>
+          </div>
+          <button onClick={() => setIsMobileMenuOpen(true)} className="p-2">
+            <Menu className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Mobile Sidebar (Drawer) */}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] lg:hidden"
+              />
+              <motion.div 
+                initial={{ x: "-100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "-100%" }}
+                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                className="fixed left-0 top-0 bottom-0 w-4/5 max-w-xs bg-vialinks-purple p-6 z-[70] flex flex-col no-print lg:hidden shadow-2xl"
+              >
+                <div className="flex justify-end mb-4">
+                  <button onClick={() => setIsMobileMenuOpen(false)} className="text-white/60 hover:text-white p-2">
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+                <NavContent />
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:flex w-80 relative overflow-hidden flex-col no-print h-screen sticky top-0">
           <div className="absolute inset-0 z-0">
             <FirebaseImage 
               storagePath="189861.jpg" 
@@ -663,85 +786,13 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
           </div>
           
           <div className="relative z-10 p-6 flex flex-col h-full">
-            <div className="flex items-center gap-2 mb-12">
-              <Zap className="text-vialinks-orange w-8 h-8" />
-              <span className="text-2xl font-bold text-white">ViaLinks</span>
-            </div>
-
-            <nav className="flex flex-col gap-2">
-              <button 
-                onClick={() => (hasActiveOrders || user.role === 'admin') && setActiveTab('overview')}
-                disabled={!hasActiveOrders && user.role !== 'admin'}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'overview' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'} ${(!hasActiveOrders && user.role !== 'admin') ? 'opacity-30 cursor-not-allowed' : ''}`}
-              >
-                <LayoutDashboard className="w-5 h-5" /> Visão Geral
-              </button>
-              <button 
-                onClick={() => (hasActiveOrders || user.role === 'admin') && setActiveTab('briefing')}
-                disabled={!hasActiveOrders && user.role !== 'admin'}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'briefing' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'} ${(!hasActiveOrders && user.role !== 'admin') ? 'opacity-30 cursor-not-allowed' : ''}`}
-              >
-                <ClipboardList className="w-5 h-5" /> Formulário Briefing
-              </button>
-              <button 
-                onClick={() => setActiveTab((!hasActiveOrders && user.role !== 'admin') ? 'store' : 'orders')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${(activeTab === 'orders' || activeTab === 'store') ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-              >
-                <ShoppingBag className="w-5 h-5" /> {(!hasActiveOrders && user.role !== 'admin') ? 'Planos e Preços' : 'Meus Pedidos'}
-              </button>
-              <button 
-                onClick={() => (hasActiveOrders || user.role === 'admin') && setActiveTab('delivery')}
-                disabled={!hasActiveOrders && user.role !== 'admin'}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'delivery' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'} ${(!hasActiveOrders && user.role !== 'admin') ? 'opacity-30 cursor-not-allowed' : ''}`}
-              >
-                <Package className="w-5 h-5" /> Entrega e Card
-              </button>
-              {(hasActiveOrders || user.role === 'admin') && (
-                <button 
-                  onClick={() => setActiveTab('testimonial')}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'testimonial' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-                >
-                  <MessageSquare className="w-5 h-5" /> Depoimento
-                </button>
-              )}
-              <button 
-                onClick={() => setActiveTab('config')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'config' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-              >
-                <Settings className="w-5 h-5" /> Configurações
-              </button>
-              {user.role === 'admin' && (
-                <button 
-                  onClick={() => setView('admin')}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all bg-vialinks-orange/20 text-vialinks-orange hover:bg-vialinks-orange/30 mt-4"
-                >
-                  <ShieldCheck className="w-5 h-5" /> Painel Admin
-                </button>
-              )}
-            </nav>
-
-            <div className="mt-auto pt-6 border-t border-white/10">
-              <div className="flex items-center gap-3 px-4 mb-6">
-                <div className="w-10 h-10 rounded-full bg-vialinks-orange flex items-center justify-center text-white font-bold">
-                  {user.email?.[0].toUpperCase()}
-                </div>
-                <div className="overflow-hidden">
-                  <p className="text-sm font-bold text-white truncate">{user.email}</p>
-                  <p className="text-xs text-white/40">{user.role === 'admin' ? 'Administrador' : 'Cliente'}</p>
-                </div>
-              </div>
-              <button 
-                onClick={onLogout}
-                className="flex items-center gap-3 px-4 py-3 w-full text-white/60 hover:text-white transition-all"
-              >
-                <LogOut className="w-5 h-5" /> Sair da Conta
-              </button>
-            </div>
+            <NavContent />
           </div>
         </div>
 
+
         {/* Main Content */}
-        <div className="flex-1 p-12 overflow-y-auto">
+        <div className="flex-1 p-4 sm:p-8 lg:p-12 overflow-y-auto w-full">
           <header className="flex justify-between items-center mb-12">
             <div>
               <h1 className="text-3xl font-extrabold text-slate-900">
@@ -1076,14 +1127,14 @@ const OrdersList = ({ user }: any) => {
         </div>
       ) : (
         orders.map((order) => (
-          <div key={order.id} className="p-6 rounded-2xl border border-slate-100 bg-slate-50 flex justify-between items-center">
+          <div key={order.id} className="p-6 rounded-2xl border border-slate-100 bg-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <p className="font-bold text-slate-900">Pedido #{order.id.slice(0, 8)}</p>
               <p className="text-sm text-slate-500">
                 {order.createdAt?.toDate ? order.createdAt.toDate().toLocaleDateString() : "Data indisponível"}
               </p>
             </div>
-            <div className="text-right">
+            <div className="text-left sm:text-right w-full sm:w-auto border-t sm:border-t-0 pt-4 sm:pt-0">
               <p className="font-bold text-vialinks-purple">R$ {order.amount}</p>
               <p className="text-xs text-green-600 font-bold uppercase">{order.status}</p>
             </div>
@@ -1304,11 +1355,167 @@ export const AdminDashboard = ({ user, setView, onLogout, onOpenCart, cartCount 
     );
   }
 
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const AdminNavContent = () => (
+    <>
+      <div className="flex items-center gap-2 mb-12">
+        <Zap className="text-vialinks-orange w-8 h-8" />
+        <span className="text-2xl font-bold text-white">Admin</span>
+      </div>
+
+      <nav className="flex flex-col gap-2 overflow-y-auto max-h-[calc(100vh-250px)] pr-2 scrollbar-hide">
+        <button 
+          onClick={() => { setActiveTab('stats'); setIsMobileMenuOpen(false); }}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'stats' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+        >
+          <DollarSign className="w-5 h-5" /> Vendas e Stats
+        </button>
+        <button 
+          onClick={() => { setActiveTab('orders'); setIsMobileMenuOpen(false); }}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'orders' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+        >
+          <Package className="w-5 h-5" /> Pedidos da Loja
+        </button>
+        <button 
+          onClick={() => { setActiveTab('briefings'); setIsMobileMenuOpen(false); }}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'briefings' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+        >
+          <ClipboardList className="w-5 h-5" /> Briefings Recebidos
+        </button>
+        <button 
+          onClick={() => { setActiveTab('deliveries'); setIsMobileMenuOpen(false); }}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'deliveries' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+        >
+          <Truck className="w-5 h-5" /> Entregas e Rastreio
+        </button>
+        <button 
+          onClick={() => { setActiveTab('users'); setIsMobileMenuOpen(false); }}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'users' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+        >
+          <Users className="w-5 h-5" /> Usuários
+        </button>
+        <button 
+          onClick={() => { setActiveTab('emails'); setIsMobileMenuOpen(false); }}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'emails' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+        >
+          <Mail className="w-5 h-5" /> Campanhas e E-mails
+        </button>
+        <button 
+          onClick={() => { setActiveTab('abandoned'); setIsMobileMenuOpen(false); }}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'abandoned' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+        >
+          <ShoppingBag className="w-5 h-5" /> Carrinhos Abandonados
+        </button>
+        <button 
+          onClick={() => { setActiveTab('testimonials'); setIsMobileMenuOpen(false); }}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'testimonials' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+        >
+          <MessageSquare className="w-5 h-5" /> Depoimentos
+        </button>
+        <button 
+          onClick={() => { setActiveTab('banners'); setIsMobileMenuOpen(false); }}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'banners' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+        >
+          <ImageIcon className="w-5 h-5" /> Banners Dashboard
+        </button>
+        <button 
+          onClick={() => { setActiveTab('plans'); setIsMobileMenuOpen(false); }}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'plans' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+        >
+          <Layers className="w-5 h-5" /> Planos e Preços
+        </button>
+        <button 
+          onClick={() => { setActiveTab('tags'); setIsMobileMenuOpen(false); }}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'tags' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+        >
+          <Code className="w-5 h-5" /> Tags e Pixels
+        </button>
+        <button 
+          onClick={() => { setActiveTab('content'); setIsMobileMenuOpen(false); }}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'content' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+        >
+          <FileEdit className="w-5 h-5" /> Conteúdo do Site
+        </button>
+        <button 
+          onClick={() => { setActiveTab('config'); setIsMobileMenuOpen(false); }}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'config' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+        >
+          <Settings className="w-5 h-5" /> Configurações
+        </button>
+
+        <button 
+          onClick={() => { setActiveTab('stats'); setIsMobileMenuOpen(false); }}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'stats' ? 'bg-vialinks-orange/20 text-vialinks-orange' : 'text-white/60 hover:text-white hover:bg-white/5'} mt-8 border border-vialinks-orange/20`}
+        >
+          <ShieldCheck className="w-5 h-5" /> Painel Admin
+        </button>
+
+        <button 
+          onClick={() => { setView('dashboard'); setIsMobileMenuOpen(false); }}
+          className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all bg-white/10 text-white mt-2 border border-white/20"
+        >
+          <LayoutDashboard className="w-5 h-5" /> Painel do Cliente
+        </button>
+      </nav>
+
+      <div className="mt-auto pt-6 border-t border-white/10">
+        <button 
+          onClick={onLogout}
+          className="flex items-center gap-3 px-4 py-3 w-full text-white/60 hover:text-white transition-all"
+        >
+          <LogOut className="w-5 h-5" /> Sair Admin
+        </button>
+      </div>
+    </>
+  );
+
   return (
     <ErrorBoundary>
-      <div className="flex min-h-screen bg-white">
+      <div className="flex min-h-screen bg-slate-50 flex-col lg:flex-row">
+        
+        {/* Mobile Header */}
+        <div className="lg:hidden flex items-center justify-between p-4 bg-slate-900 text-white shadow-md z-[50]">
+          <div className="flex items-center gap-2">
+            <Zap className="text-vialinks-orange w-6 h-6" />
+            <span className="text-xl font-bold">Admin</span>
+          </div>
+          <button onClick={() => setIsMobileMenuOpen(true)} className="p-2">
+            <Menu className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Mobile Sidebar (Drawer) */}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] lg:hidden"
+              />
+              <motion.div 
+                initial={{ x: "-100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "-100%" }}
+                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                className="fixed left-0 top-0 bottom-0 w-4/5 max-w-xs bg-slate-900 p-6 z-[70] flex flex-col no-print lg:hidden shadow-2xl"
+              >
+                <div className="flex justify-end mb-4">
+                  <button onClick={() => setIsMobileMenuOpen(false)} className="text-white/60 hover:text-white p-2">
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+                <AdminNavContent />
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
         {/* Sidebar */}
-        <div className="w-80 relative overflow-hidden flex flex-col">
+        <div className="hidden lg:flex w-80 relative overflow-hidden flex-col h-screen sticky top-0">
           <div className="absolute inset-0 z-0">
             <FirebaseImage 
               storagePath="189861.jpg" 
@@ -1320,119 +1527,12 @@ export const AdminDashboard = ({ user, setView, onLogout, onOpenCart, cartCount 
           </div>
           
           <div className="relative z-10 p-6 flex flex-col h-full">
-            <div className="flex items-center gap-2 mb-12">
-              <Zap className="text-vialinks-orange w-8 h-8" />
-              <span className="text-2xl font-bold text-white">Admin</span>
-            </div>
-
-            <nav className="flex flex-col gap-2">
-              <button 
-                onClick={() => setActiveTab('stats')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'stats' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-              >
-                <DollarSign className="w-5 h-5" /> Vendas e Stats
-              </button>
-              <button 
-                onClick={() => setActiveTab('orders')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'orders' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-              >
-                <Package className="w-5 h-5" /> Pedidos da Loja
-              </button>
-              <button 
-                onClick={() => setActiveTab('briefings')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'briefings' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-              >
-                <ClipboardList className="w-5 h-5" /> Briefings Recebidos
-              </button>
-              <button 
-                onClick={() => setActiveTab('deliveries')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'deliveries' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-              >
-                <Truck className="w-5 h-5" /> Entregas e Rastreio
-              </button>
-              <button 
-                onClick={() => setActiveTab('users')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'users' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-              >
-                <Users className="w-5 h-5" /> Usuários
-              </button>
-              <button 
-                onClick={() => setActiveTab('emails')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'emails' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-              >
-                <Mail className="w-5 h-5" /> Campanhas e E-mails
-              </button>
-              <button 
-                onClick={() => setActiveTab('abandoned')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'abandoned' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-              >
-                <ShoppingBag className="w-5 h-5" /> Carrinhos Abandonados
-              </button>
-              <button 
-                onClick={() => setActiveTab('testimonials')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'testimonials' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-              >
-                <MessageSquare className="w-5 h-5" /> Depoimentos
-              </button>
-              <button 
-                onClick={() => setActiveTab('banners')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'banners' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-              >
-                <ImageIcon className="w-5 h-5" /> Banners Dashboard
-              </button>
-              <button 
-                onClick={() => setActiveTab('plans')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'plans' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-              >
-                <Layers className="w-5 h-5" /> Planos e Preços
-              </button>
-              <button 
-                onClick={() => setActiveTab('tags')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'tags' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-              >
-                <Code className="w-5 h-5" /> Tags e Pixels
-              </button>
-              <button 
-                onClick={() => setActiveTab('content')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'content' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-              >
-                <FileEdit className="w-5 h-5" /> Conteúdo do Site
-              </button>
-              <button 
-                onClick={() => setActiveTab('config')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'config' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-              >
-                <Settings className="w-5 h-5" /> Configurações
-              </button>
-
-              <button 
-                onClick={() => setActiveTab('stats')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'stats' ? 'bg-vialinks-orange/20 text-vialinks-orange' : 'text-white/60 hover:text-white hover:bg-white/5'} mt-8 border border-vialinks-orange/20`}
-              >
-                <ShieldCheck className="w-5 h-5" /> Painel Admin
-              </button>
-
-              <button 
-                onClick={() => setView('dashboard')}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all bg-white/10 text-white mt-2 border border-white/20"
-              >
-                <LayoutDashboard className="w-5 h-5" /> Painel do Cliente
-              </button>
-            </nav>
-
-            <div className="mt-auto pt-6 border-t border-white/10">
-              <button 
-                onClick={onLogout}
-                className="flex items-center gap-3 px-4 py-3 w-full text-white/60 hover:text-white transition-all"
-              >
-                <LogOut className="w-5 h-5" /> Sair Admin
-              </button>
-            </div>
+            <AdminNavContent />
           </div>
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 p-12 overflow-y-auto">
+        <div className="flex-1 p-4 sm:p-8 lg:p-12 overflow-y-auto w-full">
           <header className="flex justify-between items-center mb-12">
             <div>
               <h1 className="text-3xl font-extrabold text-slate-900">Painel de Controle</h1>
@@ -2817,7 +2917,7 @@ const PlanManagement = () => {
       {isAdding && (
         <form onSubmit={handleAddPlan} className="p-8 bg-slate-50 rounded-3xl border border-slate-100 space-y-4">
           <h3 className="font-bold text-slate-900">{editingPlanId ? "Editar Plano" : "Novo Plano"}</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Nome do Plano</label>
               <input 
@@ -2841,7 +2941,7 @@ const PlanManagement = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Link de Pagamento (Direto)</label>
               <input 
@@ -2852,7 +2952,7 @@ const PlanManagement = () => {
                 onChange={e => setNewPlan({...newPlan, paymentLink: e.target.value})}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Ordem</label>
                 <input 
@@ -2902,7 +3002,7 @@ const PlanManagement = () => {
 
       <div className="grid gap-4">
         {plans.map((p) => (
-          <div key={p.id} className="p-6 rounded-2xl border border-slate-100 bg-slate-50 flex justify-between items-center">
+          <div key={p.id} className="p-6 rounded-2xl border border-slate-100 bg-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <p className="font-bold text-slate-900">{p.name}</p>
               <p className="text-sm text-slate-500">R$ {p.price}</p>
@@ -3061,7 +3161,7 @@ const ConfigManagement = () => {
           <h2 className="text-xl font-bold text-slate-900">Configuração de E-mail (SMTP)</h2>
         </div>
         <div className="p-8 bg-slate-50 rounded-3xl border border-slate-100 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Servidor SMTP</label>
               <input 
