@@ -782,7 +782,6 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
           <div className="max-w-4xl">
             {activeTab === 'overview' && (
               <div className="space-y-8">
-                <BannerCarousel />
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100 shadow-sm">
                   <div className="w-12 h-12 rounded-2xl bg-vialinks-purple/10 flex items-center justify-center mb-6">
@@ -811,6 +810,7 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
                   </button>
                 </div>
               </div>
+              <BannerCarousel />
             </div>
           )}
 
@@ -4933,7 +4933,7 @@ const BannerCarousel = () => {
   const current = banners[currentIndex];
 
   const contentMarkup = (
-    <div className="relative w-full h-40 md:h-56 lg:h-64 rounded-[2.5rem] overflow-hidden group mb-12 shadow-2xl shadow-slate-200/50 border border-slate-100/50">
+    <div className="relative w-full h-28 md:h-36 lg:h-44 rounded-[2rem] overflow-hidden group mb-12 shadow-xl shadow-slate-200/40 border border-slate-100/30">
       <AnimatePresence mode="wait">
         <motion.div
           key={current.id || currentIndex}
