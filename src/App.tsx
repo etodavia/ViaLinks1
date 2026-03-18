@@ -1183,60 +1183,62 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
 
   useEffect(() => {
     // Read plans directly from Firestore 'plans' collection (same source as admin dashboard)
-    const q = query(collection(db, "plans"), where("active", "==", true));
+    const q = query(collection(db, "plans"), where("active", "==", true), orderBy("order", "asc"));
+    
+    const defaultPlansList = [
+      {
+        id: 'default-1',
+        name: "Plano Start",
+        price: 97,
+        numericPrice: 97,
+        features: ["Card Digital Personalizado", "Link na Bio Profissional", "Suporte via E-mail", "Atualizações Ilimitadas"],
+        excludedFeatures: ["Cartão Físico NFC", "Envio Grátis", "PDF Interativo de Bônus"],
+        active: true,
+        order: 1,
+        popular: false,
+        cta: "Começar Agora",
+        paymentLink: ""
+      },
+      {
+        id: 'default-2',
+        name: "Plano Profissional + NFC",
+        price: 297,
+        numericPrice: 297,
+        features: ["Tudo do Plano Start", "Cartão Físico NFC Incluso", "Envio Grátis para todo Brasil", "PDF Interativo de Bônus", "Suporte Prioritário WhatsApp"],
+        excludedFeatures: ["Domínio Próprio", "Consultoria de SEO"],
+        active: true,
+        order: 2,
+        popular: true,
+        cta: "Mais Vendido",
+        paymentLink: ""
+      },
+      {
+        id: 'default-3',
+        name: "Plano Business",
+        price: 497,
+        numericPrice: 497,
+        features: ["Tudo do Plano Profissional", "Domínio Próprio (.com.br)", "Consultoria de SEO", "2 Cartões NFC Inclusos", "Gestão de Leads no Painel"],
+        excludedFeatures: [],
+        active: true,
+        order: 3,
+        popular: false,
+        cta: "Falar com Consultor",
+        paymentLink: ""
+      }
+    ];
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
-        const plansData = snapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() }))
-          .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+        const plansData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setPlans(plansData);
       } else {
-        // Fallback defaults when no plans exist in Firestore yet
-        setPlans([
-          {
-            id: 'default-1',
-            name: "Plano Start",
-            price: (97).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-            numericPrice: 97,
-            features: ["Card Digital Personalizado", "Link na Bio Profissional", "Suporte via E-mail", "Atualizações Ilimitadas"],
-            excludedFeatures: ["Cartão Físico NFC", "Envio Grátis", "PDF Interativo de Bônus"],
-            active: true,
-            order: 1,
-            popular: false,
-            cta: "Começar Agora",
-            paymentLink: ""
-          },
-          {
-            id: 'default-2',
-            name: "Plano Profissional + NFC",
-            price: (297).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-            numericPrice: 297,
-            features: ["Tudo do Plano Start", "Cartão Físico NFC Incluso", "Envio Grátis para todo Brasil", "PDF Interativo de Bônus", "Suporte Prioritário WhatsApp"],
-            excludedFeatures: ["Domínio Próprio", "Consultoria de SEO"],
-            active: true,
-            order: 2,
-            popular: true,
-            cta: "Mais Vendido",
-            paymentLink: ""
-          },
-          {
-            id: 'default-3',
-            name: "Plano Business",
-            price: (497).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-            numericPrice: 497,
-            features: ["Tudo do Plano Profissional", "Domínio Próprio (.com.br)", "Consultoria de SEO", "2 Cartões NFC Inclusos", "Gestão de Leads no Painel"],
-            excludedFeatures: [],
-            active: true,
-            order: 3,
-            popular: false,
-            cta: "Falar com Consultor",
-            paymentLink: ""
-          }
-        ]);
+        setPlans(defaultPlansList);
       }
       setLoading(false);
     }, (error) => {
       console.error("Error fetching plans:", error);
+      // Even on error, show defaults so the page isn't empty
+      setPlans(defaultPlansList);
       setLoading(false);
     });
 
