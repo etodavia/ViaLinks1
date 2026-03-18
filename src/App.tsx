@@ -2038,10 +2038,60 @@ function App() {
     }
   };
 
-  if (!isAuthReady) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white font-sans">Carregando...</div>;
+  if (!isAuthReady) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 relative overflow-hidden font-sans">
+      <div className="absolute inset-0 z-0">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-vialinks-purple/20 blur-[100px] rounded-full animate-pulse" />
+      </div>
+      <div className="relative z-10 flex flex-col items-center">
+        <motion.div 
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: [0.8, 1.1, 1], opacity: 1 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="w-20 h-20 bg-vialinks-purple rounded-3xl flex items-center justify-center shadow-2xl shadow-vialinks-purple/40 mb-6"
+        >
+          <Zap className="text-white w-10 h-10" />
+        </motion.div>
+        <motion.h2
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="text-3xl font-black text-white tracking-tighter mb-4"
+        >
+          ViaLinks
+        </motion.h2>
+        <div className="flex gap-1.5">
+          <div className="w-2 h-2 bg-vialinks-orange rounded-full animate-bounce [animation-delay:-0.3s]" />
+          <div className="w-2 h-2 bg-vialinks-orange rounded-full animate-bounce [animation-delay:-0.15s]" />
+          <div className="w-2 h-2 bg-vialinks-orange rounded-full animate-bounce" />
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-900 text-white font-sans">Carregando...</div>}>
+    <Suspense fallback={
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 relative overflow-hidden font-sans">
+        <div className="absolute inset-0 z-0">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-vialinks-purple/20 blur-[100px] rounded-full animate-pulse" />
+        </div>
+        <div className="relative z-10 flex flex-col items-center">
+          <motion.div 
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: [0.8, 1.1, 1], opacity: 1 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="w-16 h-16 bg-vialinks-purple rounded-2xl flex items-center justify-center shadow-xl shadow-vialinks-purple/30 mb-4"
+          >
+            <Zap className="text-white w-8 h-8" />
+          </motion.div>
+          <div className="flex gap-1">
+            <div className="w-1.5 h-1.5 bg-vialinks-orange rounded-full animate-bounce [animation-delay:-0.3s]" />
+            <div className="w-1.5 h-1.5 bg-vialinks-orange rounded-full animate-bounce [animation-delay:-0.15s]" />
+            <div className="w-1.5 h-1.5 bg-vialinks-orange rounded-full animate-bounce" />
+          </div>
+        </div>
+      </div>
+    }>
       <CartDrawer 
         isOpen={isCartOpen} 
         onClose={() => setIsCartOpen(false)} 
