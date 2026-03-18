@@ -1185,63 +1185,23 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
     // Read plans directly from Firestore 'plans' collection (same source as admin dashboard)
     // Fetch the entire 'plans' collection for robustness, just like in AdminDashboard.
     
-    const defaultPlansList = [
-      {
-        id: 'default-1',
-        name: "[EXEMPLO] Plano Start",
-        price: 97,
-        numericPrice: 97,
-        features: ["Card Digital Personalizado", "Link na Bio Profissional", "Suporte via E-mail", "Atualizações Ilimitadas"],
-        excludedFeatures: ["Cartão Físico NFC", "Envio Grátis", "PDF Interativo de Bônus"],
-        active: true,
-        order: 1,
-        popular: false,
-        cta: "Começar Agora",
-        paymentLink: ""
-      },
-      {
-        id: 'default-2',
-        name: "[EXEMPLO] Plano Profissional + NFC",
-        price: 297,
-        numericPrice: 297,
-        features: ["Tudo do Plano Start", "Cartão Físico NFC Incluso", "Envio Grátis para todo Brasil", "PDF Interativo de Bônus", "Suporte Prioritário WhatsApp"],
-        excludedFeatures: ["Domínio Próprio", "Consultoria de SEO"],
-        active: true,
-        order: 2,
-        popular: true,
-        cta: "Mais Vendido",
-        paymentLink: ""
-      },
-      {
-        id: 'default-3',
-        name: "[EXEMPLO] Plano Business",
-        price: 497,
-        numericPrice: 497,
-        features: ["Tudo do Plano Profissional", "Domínio Próprio (.com.br)", "Consultoria de SEO", "2 Cartões NFC Inclusos", "Gestão de Leads no Painel"],
-        excludedFeatures: [],
-        active: true,
-        order: 3,
-        popular: false,
-        cta: "Falar com Consultor",
-        paymentLink: ""
-      }
-    ];
 
     const unsubscribe = onSnapshot(collection(db, "plans"), (snapshot) => {
       if (!snapshot.empty) {
         const plansData = snapshot.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter((p: any) => p.active !== false)
           .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
-        setPlans(plansData.length > 0 ? plansData : defaultPlansList);
+        
+        // Only show active plans to the public, but show a clear error if none are active
+        const activePlans = plansData.filter((p: any) => p.active !== false);
+        setPlans(activePlans);
       } else {
-        setPlans(defaultPlansList);
+        setPlans([]);
       }
       setLoading(false);
     }, (error) => {
       console.error("Error fetching plans:", error);
-      // Even on error, show defaults so the page isn't empty
-      setPlans(defaultPlansList);
+      setPlans([]);
       setLoading(false);
     });
 
@@ -1262,7 +1222,7 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-vialinks-orange"></div>
           </div>
-        ) : (
+        ) : plans.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 relative z-20">
             {plans.map((plan, i) => (
               <motion.div
@@ -1293,7 +1253,7 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
                   </div>
                 </div>
                 <ul className="space-y-4 mb-10 flex-grow">
-                  {plan.features.map((feature: any, idx: number) => {
+                  {(plan.features || []).map((feature: any, idx: number) => {
                     const isObject = typeof feature === 'object' && feature !== null;
                     const included = isObject ? feature.included : true;
                     const text = isObject ? feature.text : feature;
@@ -1335,6 +1295,12 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
                 </button>
               </motion.div>
             ))}
+          </div>
+        ) : (
+          <div className="text-center py-20 bg-white/5 rounded-3xl border border-dashed border-white/10">
+            <Package className="w-12 h-12 text-slate-500 mx-auto mb-4" />
+            <p className="text-slate-400">Nenhum plano ativo encontrado.</p>
+            <p className="text-xs text-slate-500 mt-2">Verifique o Painel Admin e certifique-se de que os planos estão marcados como 'Ativo'.</p>
           </div>
         )}
       </div>
