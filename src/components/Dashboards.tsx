@@ -1102,14 +1102,15 @@ export const StoreTab = ({ user, setView, onAddToCart }: any) => {
   }, []);
 
   const handleBuy = (plan: any) => {
+    const numericPrice = plan.numericPrice ?? (typeof plan.price === 'number' ? plan.price : parseFloat(String(plan.price)) || 0);
     onAddToCart({
       id: plan.id,
       name: plan.name,
-      price: typeof plan.price === 'number' ? plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : plan.price,
-      numericPrice: plan.numericPrice,
+      price: numericPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+      numericPrice: numericPrice,
       image: "189861.jpg", 
       description: plan.name,
-      paymentLink: plan.paymentLink // CRITICAL: Pass the link to the cart
+      paymentLink: plan.paymentLink || ""
     });
   };
 

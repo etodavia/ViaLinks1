@@ -67,7 +67,10 @@ const CartDrawer = ({
   onCheckout: () => void;
   isProcessing: boolean;
 }) => {
-  const total = items.reduce((acc, item) => acc + (item.numericPrice * item.quantity), 0);
+  const total = items.reduce((acc, item) => {
+    const price = item.numericPrice ?? (typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^\d,]/g, '').replace(',', '.'))) ?? 0;
+    return acc + (price * (item.quantity || 1));
+  }, 0);
 
   return (
     <AnimatePresence>
@@ -1552,16 +1555,8 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
       alert("Por favor, insira um e-mail válido.");
       return;
     }
-    if (!formData.name || formData.name.length < 3) {
-      alert("Por favor, insira seu nome completo.");
-      return;
-    }
-    if (!formData.phone || formData.phone.length < 10) {
-      alert("Por favor, insira um telefone válido com DDD.");
-      return;
-    }
-    if (!formData.taxId || formData.taxId.length < 11) {
-      alert("Por favor, insira um CPF ou CNPJ válido.");
+    if (!formData.name || formData.name.length < 2) {
+      alert("Por favor, insira seu nome.");
       return;
     }
 
