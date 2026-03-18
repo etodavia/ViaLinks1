@@ -1043,85 +1043,62 @@ export const StoreTab = ({ user, setView, onAddToCart }: any) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPlansAndConfig = async () => {
-      try {
-        // 1. Fetch Plan Links from Config
-        const configSnap = await getDoc(doc(db, "config", "payment"));
-        const paymentLinks = configSnap.exists() ? configSnap.data().settings : {};
-
-        // 2. Fetch Plans (Optional, fallback to defaults)
-        let activePlans = [];
-        try {
-          const response = await fetch('/api/plans');
-          if (response.ok) {
-            const plansData = await response.json();
-            activePlans = plansData
-              .filter((p: any) => p.active !== false)
-              .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
-          }
-        } catch (e) {
-          console.warn("Pricing fetch failed, using defaults");
-        }
-
-        const defaultPlans = [
+    // Read plans directly from Firestore 'plans' collection (same source as admin dashboard)
+    const q = query(collection(db, "plans"), where("active", "==", true));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        const plansData = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+        setPlans(plansData);
+      } else {
+        // Fallback defaults when no plans exist in Firestore yet
+        setPlans([
           {
             id: 'default-1',
             name: "Plano Start",
-            price: (97).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+            price: 97,
             numericPrice: 97,
             features: ["Card Digital Personalizado", "Link na Bio Profissional", "Suporte via E-mail", "Atualizações Ilimitadas"],
             active: true,
             order: 1,
+            popular: false,
             cta: "Começar Agora",
-            paymentLink: paymentLinks.planStartLink || ""
+            paymentLink: ""
           },
           {
             id: 'default-2',
             name: "Plano Profissional + NFC",
-            price: (297).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+            price: 297,
             numericPrice: 297,
             features: ["Tudo do Plano Start", "Cartão Físico NFC Incluso", "Envio Grátis para todo Brasil", "PDF Interativo de Bônus", "Suporte Prioritário WhatsApp"],
             active: true,
             order: 2,
             popular: true,
             cta: "Mais Vendido",
-            paymentLink: paymentLinks.planProLink || ""
+            paymentLink: ""
           },
           {
             id: 'default-3',
             name: "Plano Business",
-            price: (497).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+            price: 497,
             numericPrice: 497,
             features: ["Tudo do Plano Profissional", "Domínio Próprio (.com.br)", "Consultoria de SEO", "2 Cartões NFC Inclusos", "Gestão de Leads no Painel"],
             active: true,
             order: 3,
+            popular: false,
             cta: "Falar com Consultor",
-            paymentLink: paymentLinks.planBusinessLink || ""
+            paymentLink: ""
           }
-        ];
-
-        // If we have dynamic plans, merge them with the links
-        if (activePlans.length > 0) {
-          const mergedPlans = activePlans.map((p: any) => {
-            let link = p.paymentLink; // Check if plan has its own link
-            if (!link) {
-              if (p.name.includes("Start")) link = paymentLinks.planStartLink;
-              else if (p.name.includes("Profissional")) link = paymentLinks.planProLink;
-              else if (p.name.includes("Business")) link = paymentLinks.planBusinessLink;
-            }
-            return { ...p, paymentLink: link || "" };
-          });
-          setPlans(mergedPlans);
-        } else {
-          setPlans(defaultPlans);
-        }
-      } catch (error) {
-        console.error("Error in fetchPlansAndConfig:", error);
-      } finally {
-        setLoading(false);
+        ]);
       }
-    };
-    fetchPlansAndConfig();
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching plans:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const handleBuy = (plan: any) => {
