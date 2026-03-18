@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useState, useEffect, Component } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   BarChart, 
   Bar, 
