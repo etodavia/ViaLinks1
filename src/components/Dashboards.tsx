@@ -566,7 +566,10 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
   const [activeTab, setActiveTab] = useState('overview');
   const [showOnboarding, setShowOnboarding] = useState(user?.hasSeenOnboarding === false);
   const [hasActiveOrders, setHasActiveOrders] = useState(false);
-  const [hasPaid, setHasPaid] = useState<boolean | null>(user?.hasPaid === true ? true : null);
+  // Admins are always paid. For clients, use stored hasPaid or default to false (shows gate)
+  const [hasPaid, setHasPaid] = useState<boolean>(
+    user?.role === 'admin' ? true : (user?.hasPaid === true)
+  );
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -574,6 +577,7 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
     // Admins always see everything
     if (user.role === 'admin') {
       setHasActiveOrders(true);
+      setHasPaid(true);
       return;
     }
 
@@ -587,10 +591,7 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
       setHasActiveOrders(active);
       if (active) {
         setHasPaid(true);
-        // Force overview on first paid access
         setActiveTab(prev => prev === 'store' ? 'overview' : prev);
-      } else if (hasPaid !== true) {
-        setActiveTab('store');
       }
     });
 
@@ -601,19 +602,16 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
   useEffect(() => {
     if (!user?.uid || user.role === 'admin') return;
     const unsubscribe = onSnapshot(doc(db, "users", user.uid), (snap) => {
-      if (snap.exists() && snap.data().hasPaid === true) {
-        setHasPaid(true);
-        setHasActiveOrders(true);
+      if (snap.exists()) {
+        if (snap.data().hasPaid === true) {
+          setHasPaid(true);
+          setHasActiveOrders(true);
+        }
+        // If hasPaid is explicitly false or not set, keep the gate (already false by default)
       }
     });
     return () => unsubscribe();
   }, [user.uid]);
-
-  // Show PaymentGate while we're still loading (null) or definitively not paid
-  if (hasPaid === null) {
-    // Still loading - show spinner briefly
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-12 h-12 text-vialinks-purple animate-spin" /></div>;
-  }
 
   if (!hasPaid && user.role !== 'admin') {
     return <PaymentGate user={user} onPaid={() => { setHasPaid(true); setHasActiveOrders(true); setActiveTab('overview'); }} />;
