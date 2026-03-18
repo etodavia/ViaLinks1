@@ -1633,8 +1633,8 @@ export const AdminDashboard = ({ user, setView, onLogout, onOpenCart, cartCount 
           {activeTab === 'deliveries' && <DeliveryManagement />}
 
               {selectedBriefing && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/50 backdrop-blur-sm">
-                  <div className="bg-white w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl p-8 relative no-print-container">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/50 backdrop-blur-sm no-print-container">
+                  <div className="bg-white w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl p-8 relative print:shadow-none print:p-0">
                     <button 
                       onClick={() => setSelectedBriefing(null)}
                       className="absolute top-6 right-6 p-2 hover:bg-slate-100 rounded-full no-print"
