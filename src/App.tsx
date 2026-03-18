@@ -1934,13 +1934,8 @@ function App() {
   console.log("App rendering, isAuthReady:", isAuthReady, "user:", user?.uid);
 
   const addToCart = (item: any) => {
-    setCart(prev => {
-      const exists = prev.find(i => i.id === item.id);
-      if (exists) {
-        return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
-      }
-      return [...prev, { ...item, quantity: 1 }];
-    });
+    // Replace the entire cart with the new item, ensuring only one product is present
+    setCart([{ ...item, quantity: 1 }]);
     setIsCartOpen(true);
   };
 
