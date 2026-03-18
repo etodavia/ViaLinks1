@@ -429,7 +429,7 @@ const TestimonialModeration = () => {
   );
 };
 
-const PaymentGate = ({ user, onPaid }: { user: any; onPaid: () => void }) => {
+const PaymentGate = ({ user, onPaid, setView }: { user: any; onPaid: () => void; setView: (v: string) => void }) => {
   const [purchaseEmail, setPurchaseEmail] = useState(user?.email || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -552,9 +552,12 @@ const PaymentGate = ({ user, onPaid }: { user: any; onPaid: () => void }) => {
 
         <div className="mt-8 pt-6 border-t border-slate-100 text-center">
           <p className="text-xs text-slate-400 mb-4">Ainda não tem um plano?</p>
-          <a href="/#planos" className="text-vialinks-orange font-bold text-sm hover:underline">
+          <button
+            onClick={() => setView('landing')}
+            className="text-vialinks-orange font-bold text-sm hover:underline"
+          >
             Ver Planos e Preços →
-          </a>
+          </button>
         </div>
       </div>
     </div>
@@ -614,7 +617,7 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
   }, [user.uid]);
 
   if (!hasPaid && user.role !== 'admin') {
-    return <PaymentGate user={user} onPaid={() => { setHasPaid(true); setHasActiveOrders(true); setActiveTab('overview'); }} />;
+    return <PaymentGate user={user} setView={setView} onPaid={() => { setHasPaid(true); setHasActiveOrders(true); setActiveTab('overview'); }} />;
   }
 
   const handleCompleteOnboarding = async () => {
