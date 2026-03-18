@@ -1267,6 +1267,7 @@ export const AdminDashboard = ({ user, setView, onLogout, onOpenCart, cartCount 
 
   const [selectedBriefing, setSelectedBriefing] = useState<any>(null);
   const [chartData, setChartData] = useState<any[]>([]);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (isAuthorized) {
@@ -1354,8 +1355,6 @@ export const AdminDashboard = ({ user, setView, onLogout, onOpenCart, cartCount 
       </div>
     );
   }
-
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const AdminNavContent = () => (
     <>
