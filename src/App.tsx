@@ -1614,10 +1614,8 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
           
         window.location.href = finalUrl;
       } else {
-        // Fallback: If no link is found, we might need a manual process or show a message
-        console.warn("No paymentLink found for product:", mainProduct);
-        alert("Obrigado pelo interesse! Nossa equipe entrará em contato para finalizar o pagamento.");
-        setView('landing');
+        // Fallback: If no link is found, go back to landing
+        window.location.href = '/'; 
       }
     } catch (err: any) {
       console.error("Checkout Capture Error:", err);
