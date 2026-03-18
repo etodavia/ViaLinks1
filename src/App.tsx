@@ -38,8 +38,7 @@ import {
   Info,
   Cookie,
   Eye,
-  Loader2,
-  AlertCircle
+  Loader2
 } from "lucide-react";
 
 // Lazy load heavy components
@@ -1180,12 +1179,9 @@ const Cycle = ({ onAddToCart, content }: { onAddToCart: (item: any) => void; con
 const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: (v: any) => void; onAddToCart: (item: any) => void; content?: any }) => {
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-
   useEffect(() => {
     // Read plans directly from Firestore 'plans' collection
     const unsubscribe = onSnapshot(collection(db, "plans"), (snapshot) => {
-      setFetchError(null);
       if (!snapshot.empty) {
         const plansData = snapshot.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
@@ -1199,9 +1195,6 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
       setLoading(false);
     }, (error: any) => {
       console.error("Error fetching plans:", error);
-      setFetchError(error.code === 'permission-denied' 
-        ? "Erro de Permissão: O banco de dados está restringindo o acesso público aos planos." 
-        : `Erro ao buscar planos: ${error.message || error}`);
       setPlans([]);
       setLoading(false);
     });
@@ -1217,14 +1210,6 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
           <p className="text-lg text-slate-400">{content?.pricingDesc || "Escolha o plano ideal para o seu momento profissional. Pagamento único, sem mensalidades."}</p>
         </div>
 
-        {fetchError && (
-          <div className="max-w-md mx-auto mb-10 p-6 bg-red-500/10 border border-red-500/50 rounded-2xl text-center">
-            <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-4" />
-            <h3 className="text-white font-bold mb-2">Ops! Algo deu errado</h3>
-            <p className="text-red-200 text-sm mb-4">{fetchError}</p>
-            <p className="text-slate-400 text-xs">Por favor, verifique as Regras de Segurança do Firebase para a coleção 'plans'.</p>
-          </div>
-        )}
 
         {loading ? (
           <div className="flex justify-center py-12">
