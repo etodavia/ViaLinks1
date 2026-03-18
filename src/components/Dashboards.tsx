@@ -1363,7 +1363,7 @@ export const AdminDashboard = ({ user, setView, onLogout, onOpenCart, cartCount 
         <span className="text-2xl font-bold text-white">Admin</span>
       </div>
 
-      <nav className="flex flex-col gap-2 overflow-y-auto max-h-[calc(100vh-250px)] pr-2 scrollbar-hide">
+      <nav className="flex flex-col gap-2 overflow-y-auto max-h-[calc(100vh-180px)] pr-2 custom-scrollbar">
         <button 
           onClick={() => { setActiveTab('stats'); setIsMobileMenuOpen(false); }}
           className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'stats' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
