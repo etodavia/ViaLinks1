@@ -12,7 +12,7 @@ export class StripeService {
     }
 
     this.stripe = new Stripe(key, {
-      apiVersion: '2025-01-27.acacia' as any,
+      apiVersion: '2024-11-20.acacia' as any,
     });
     return this.stripe;
   }

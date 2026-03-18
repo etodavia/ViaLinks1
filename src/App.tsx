@@ -3,19 +3,6 @@ import React, { useRef, useState, useEffect, Suspense, lazy } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements } from '@stripe/react-stripe-js';
-import { CheckoutForm } from "./components/CheckoutForm";
-
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || "pk_live_51RXxToAzbUVU35SS3NPa5nDspCqjSon0vWQ6OMs0yRC0LZx0VuS99BiKCleNAZnqS9lr3LJUWI2BbeJdVT0CNgSt00LenAPkI8");
-
-const STRIPE_APPEARANCE: any = {
-  theme: 'night',
-  variables: {
-    colorPrimary: '#ff6b00',
-  },
-};
-
 gsap.registerPlugin(ScrollTrigger);
 import { FirebaseImage } from "./components/FirebaseImage";
 import { 
@@ -1584,56 +1571,57 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
     setIntentError(null);
 
     try {
-      // First try transparent checkout (PaymentIntent)
-      const response = await fetch('/api/create-payment-intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: cart.map(item => ({
-            id: item.id,
-            name: item.name,
-            quantity: item.quantity,
-            numericPrice: item.numericPrice
-          })),
-          email: formData.email,
-          name: formData.name,
-          phone: formData.phone,
-          taxId: formData.taxId
-        })
-      });
+      // 1. Save Lead/Abandoned Cart to Firestore
+      const saleRef = doc(collection(db, "sales"));
+      const saleData = {
+        userId: user?.uid || null,
+        email: formData.email,
+        name: formData.name,
+        phone: formData.phone,
+        taxId: formData.taxId,
+        address: {
+          zip: formData.zip,
+          street: formData.street,
+          number: formData.number,
+          neighborhood: formData.neighborhood,
+          city: formData.city,
+          state: formData.state
+        },
+        items: cart.map(item => ({
+          id: item.id,
+          name: item.name,
+          quantity: item.quantity,
+          numericPrice: item.numericPrice || item.price
+        })),
+        amount: total,
+        status: "pending_payment", // User is being redirected to Stripe
+        type: "lead_redirect",
+        createdAt: serverTimestamp()
+      };
+      
+      await setDoc(saleRef, saleData);
 
-      const data = await response.json();
-      if (data.clientSecret) {
-        setClientSecret(data.clientSecret);
+      // 2. Determine Redirection URL
+      // We look for a paymentLink in the first item of the cart (usually it's one main product)
+      const mainProduct = cart[0];
+      const redirectUrl = mainProduct?.paymentLink || mainProduct?.numericPrice_link; 
+
+      if (redirectUrl) {
+        // Append email to Stripe Payment Link for convenience if it's a Stripe link
+        const finalUrl = redirectUrl.includes('buy.stripe.com') 
+          ? `${redirectUrl}${redirectUrl.includes('?') ? '&' : '?'}prefilled_email=${encodeURIComponent(formData.email)}`
+          : redirectUrl;
+          
+        window.location.href = finalUrl;
       } else {
-        // Fallback to Hosted Checkout if PaymentIntent fails (e.g. key mismatch)
-        console.warn("Falling back to Hosted Checkout Session... Error:", data.message || data.error);
-        const sessionResponse = await fetch('/api/create-checkout-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            items: cart.map(item => ({
-              id: item.id,
-              name: item.name,
-              quantity: item.quantity,
-              numericPrice: item.numericPrice
-            })),
-            email: formData.email,
-            name: formData.name,
-            phone: formData.phone,
-            taxId: formData.taxId
-          })
-        });
-        const sessionData = await sessionResponse.json();
-        if (sessionData.url) {
-          window.location.href = sessionData.url;
-        } else {
-          throw new Error(sessionData.message || sessionData.error || "Erro ao iniciar o pagamento.");
-        }
+        // Fallback: If no link is found, we might need a manual process or show a message
+        console.warn("No paymentLink found for product:", mainProduct);
+        alert("Obrigado pelo interesse! Nossa equipe entrará em contato para finalizar o pagamento.");
+        setView('landing');
       }
     } catch (err: any) {
-      console.error("Checkout Error:", err);
-      setIntentError(err.message || "Erro de conexão. Verifique o console para mais detalhes.");
+      console.error("Checkout Capture Error:", err);
+      setIntentError("Erro ao processar seu pedido. Tente novamente.");
     } finally {
       setIsIntentLoading(false);
     }
@@ -1759,26 +1747,14 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
               </div>
               <div className="p-6">
                 <div className="space-y-4">
-                  {clientSecret ? (
-                    <Elements stripe={stripePromise} options={{ clientSecret, appearance: STRIPE_APPEARANCE }}>
-                      <CheckoutForm 
-                        clientSecret={clientSecret} 
-                        amount={total} 
-                        onCancel={() => setClientSecret(null)} 
-                      />
-                    </Elements>
-                  ) : (
-                    <>
-                      <button 
-                        onClick={onFinalizeClick}
-                        disabled={isIntentLoading}
-                        className="w-full bg-vialinks-orange text-white py-5 rounded-2xl font-black text-xl shadow-lg shadow-vialinks-orange/20 flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all"
-                      >
-                        {isIntentLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <>CONCLUIR PEDIDO <ArrowRight className="w-6 h-6" /></>}
-                      </button>
-                      {intentError && <p className="text-red-500 text-sm text-center font-bold font-mono p-4 bg-red-50 rounded-lg">{intentError}</p>}
-                    </>
-                  )}
+                  <button 
+                    onClick={onFinalizeClick}
+                    disabled={isIntentLoading}
+                    className="w-full bg-vialinks-orange text-white py-5 rounded-2xl font-black text-xl shadow-lg shadow-vialinks-orange/20 flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  >
+                    {isIntentLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <>CONCLUIR PEDIDO <ArrowRight className="w-6 h-6" /></>}
+                  </button>
+                  {intentError && <p className="text-red-500 text-sm text-center font-bold font-mono p-4 bg-red-50 rounded-lg">{intentError}</p>}
                   <div className="flex justify-center items-center gap-4 opacity-70 grayscale-0 px-4 mt-4">
                     <img src="https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg" alt="Stripe" className="h-6" />
                     <div className="h-4 w-px bg-slate-200" />

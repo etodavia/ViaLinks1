@@ -1043,15 +1043,27 @@ export const StoreTab = ({ user, setView, onAddToCart }: any) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPlans = async () => {
+    const fetchPlansAndConfig = async () => {
       try {
-        const response = await fetch('/api/plans');
-        if (!response.ok) throw new Error("Falha ao carregar planos");
-        const plansData = await response.json();
-        const activePlans = plansData
-          .filter((p: any) => p.active !== false)
-          .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
-        setPlans(activePlans.length > 0 ? activePlans : [
+        // 1. Fetch Plan Links from Config
+        const configSnap = await getDoc(doc(db, "config", "payment"));
+        const paymentLinks = configSnap.exists() ? configSnap.data().settings : {};
+
+        // 2. Fetch Plans (Optional, fallback to defaults)
+        let activePlans = [];
+        try {
+          const response = await fetch('/api/plans');
+          if (response.ok) {
+            const plansData = await response.json();
+            activePlans = plansData
+              .filter((p: any) => p.active !== false)
+              .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+          }
+        } catch (e) {
+          console.warn("Pricing fetch failed, using defaults");
+        }
+
+        const defaultPlans = [
           {
             id: 'default-1',
             name: "Plano Start",
@@ -1060,7 +1072,8 @@ export const StoreTab = ({ user, setView, onAddToCart }: any) => {
             features: ["Card Digital Personalizado", "Link na Bio Profissional", "Suporte via E-mail", "Atualizações Ilimitadas"],
             active: true,
             order: 1,
-            cta: "Começar Agora"
+            cta: "Começar Agora",
+            paymentLink: paymentLinks.planStartLink || ""
           },
           {
             id: 'default-2',
@@ -1071,7 +1084,8 @@ export const StoreTab = ({ user, setView, onAddToCart }: any) => {
             active: true,
             order: 2,
             popular: true,
-            cta: "Mais Vendido"
+            cta: "Mais Vendido",
+            paymentLink: paymentLinks.planProLink || ""
           },
           {
             id: 'default-3',
@@ -1081,61 +1095,45 @@ export const StoreTab = ({ user, setView, onAddToCart }: any) => {
             features: ["Tudo do Plano Profissional", "Domínio Próprio (.com.br)", "Consultoria de SEO", "2 Cartões NFC Inclusos", "Gestão de Leads no Painel"],
             active: true,
             order: 3,
-            cta: "Falar com Consultor"
+            cta: "Falar com Consultor",
+            paymentLink: paymentLinks.planBusinessLink || ""
           }
-        ]);
+        ];
+
+        // If we have dynamic plans, merge them with the links
+        if (activePlans.length > 0) {
+          const mergedPlans = activePlans.map((p: any) => {
+            let link = p.paymentLink; // Check if plan has its own link
+            if (!link) {
+              if (p.name.includes("Start")) link = paymentLinks.planStartLink;
+              else if (p.name.includes("Profissional")) link = paymentLinks.planProLink;
+              else if (p.name.includes("Business")) link = paymentLinks.planBusinessLink;
+            }
+            return { ...p, paymentLink: link || "" };
+          });
+          setPlans(mergedPlans);
+        } else {
+          setPlans(defaultPlans);
+        }
       } catch (error) {
-        console.warn("Pricing fetch failed, using defaults");
-        setPlans([
-          {
-            id: 'default-1',
-            name: "Plano Start",
-            price: (97).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-            numericPrice: 97,
-            features: ["Card Digital Personalizado", "Link na Bio Profissional", "Suporte via E-mail", "Atualizações Ilimitadas"],
-            active: true,
-            order: 1,
-            cta: "Começar Agora"
-          },
-          {
-            id: 'default-2',
-            name: "Plano Profissional + NFC",
-            price: (297).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-            numericPrice: 297,
-            features: ["Tudo do Plano Start", "Cartão Físico NFC Incluso", "Envio Grátis para todo Brasil", "PDF Interativo de Bônus", "Suporte Prioritário WhatsApp"],
-            active: true,
-            order: 2,
-            popular: true,
-            cta: "Mais Vendido"
-          },
-          {
-            id: 'default-3',
-            name: "Plano Business",
-            price: (497).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-            numericPrice: 497,
-            features: ["Tudo do Plano Profissional", "Domínio Próprio (.com.br)", "Consultoria de SEO", "2 Cartões NFC Inclusos", "Gestão de Leads no Painel"],
-            active: true,
-            order: 3,
-            cta: "Falar com Consultor"
-          }
-        ]);
+        console.error("Error in fetchPlansAndConfig:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchPlans();
+    fetchPlansAndConfig();
   }, []);
 
   const handleBuy = (plan: any) => {
     onAddToCart({
       id: plan.id,
       name: plan.name,
-      price: plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+      price: typeof plan.price === 'number' ? plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : plan.price,
       numericPrice: plan.numericPrice,
       image: "189861.jpg", 
-      description: plan.name
+      description: plan.name,
+      paymentLink: plan.paymentLink // CRITICAL: Pass the link to the cart
     });
-    // Removed setView('checkout') to just open cart as requested
   };
 
   if (loading) return <div className="flex justify-center p-12"><Loader2 className="animate-spin w-12 h-12 text-vialinks-purple" /></div>;
@@ -2558,7 +2556,7 @@ const PlanManagement = () => {
         });
       }
       setIsAdding(false);
-      setNewPlan({ name: "", price: 0, features: "", excludedFeatures: "", active: true, order: 0, popular: false, cta: "" });
+      setNewPlan({ name: "", price: 0, features: "", excludedFeatures: "", active: true, order: 0, popular: false, cta: "", paymentLink: "" });
     } catch (error) {
       handleFirestoreError(error, editingPlanId ? OperationType.UPDATE : OperationType.CREATE, "plans");
     }
@@ -2574,7 +2572,8 @@ const PlanManagement = () => {
         active: true,
         order: 1,
         popular: false,
-        cta: "Começar Agora"
+        cta: "Começar Agora",
+        paymentLink: ""
       },
       {
         name: "Plano Profissional + NFC",
@@ -2584,7 +2583,8 @@ const PlanManagement = () => {
         active: true,
         order: 2,
         popular: true,
-        cta: "Mais Vendido"
+        cta: "Mais Vendido",
+        paymentLink: ""
       },
       {
         name: "Plano Business",
@@ -2594,7 +2594,8 @@ const PlanManagement = () => {
         active: true,
         order: 3,
         popular: false,
-        cta: "Falar com Consultor"
+        cta: "Falar com Consultor",
+        paymentLink: ""
       }
     ];
 
@@ -2618,7 +2619,8 @@ const PlanManagement = () => {
       active: p.active,
       order: p.order || 0,
       popular: p.popular || false,
-      cta: p.cta || ""
+      cta: p.cta || "",
+      paymentLink: p.paymentLink || ""
     });
     setEditingPlanId(p.id);
     setIsAdding(true);
@@ -2645,7 +2647,7 @@ const PlanManagement = () => {
               setIsAdding(!isAdding);
               if (isAdding) {
                 setEditingPlanId(null);
-                setNewPlan({ name: "", price: 0, features: "", excludedFeatures: "", active: true, order: 0, popular: false, cta: "" });
+                setNewPlan({ name: "", price: 0, features: "", excludedFeatures: "", active: true, order: 0, popular: false, cta: "", paymentLink: "" });
               }
             }}
             className="bg-vialinks-orange text-white px-6 py-2 rounded-xl font-bold"
@@ -2682,36 +2684,38 @@ const PlanManagement = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Ordem</label>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Link de Pagamento (Direto)</label>
               <input 
-                type="number" 
+                type="url" 
+                placeholder="https://buy.stripe.com/..."
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-vialinks-orange"
-                value={newPlan.order}
-                onChange={e => setNewPlan({...newPlan, order: parseInt(e.target.value)})}
+                value={newPlan.paymentLink || ""}
+                onChange={e => setNewPlan({...newPlan, paymentLink: e.target.value})}
               />
             </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Texto do Botão (CTA)</label>
-              <input 
-                type="text" 
-                placeholder="Ex: Começar Agora"
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-vialinks-orange"
-                value={newPlan.cta}
-                onChange={e => setNewPlan({...newPlan, cta: e.target.value})}
-              />
-            </div>
-            <div className="flex items-end pb-3">
-              <label className="flex items-center gap-2 cursor-pointer">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Ordem</label>
                 <input 
-                  type="checkbox" 
-                  className="w-5 h-5 rounded border-slate-300 text-vialinks-orange focus:ring-vialinks-orange"
-                  checked={newPlan.popular}
-                  onChange={e => setNewPlan({...newPlan, popular: e.target.checked})}
+                  type="number" 
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-vialinks-orange"
+                  value={newPlan.order}
+                  onChange={e => setNewPlan({...newPlan, order: parseInt(e.target.value)})}
                 />
-                <span className="text-xs font-bold text-slate-400 uppercase">Destaque (Popular)</span>
-              </label>
+              </div>
+              <div className="flex items-end pb-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="w-5 h-5 rounded border-slate-300 text-vialinks-orange focus:ring-vialinks-orange"
+                    checked={newPlan.popular}
+                    onChange={e => setNewPlan({...newPlan, popular: e.target.checked})}
+                  />
+                  <span className="text-xs font-bold text-slate-400 uppercase">Destaque</span>
+                </label>
+              </div>
             </div>
           </div>
           <div className="grid md:grid-cols-2 gap-4">
@@ -2786,29 +2790,35 @@ const ConfigManagement = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "config"), (snapshot) => {
-      if (snapshot.empty) {
-        setLoading(false);
-        return;
+    setLoading(true);
+    
+    const unsubscribePayment = onSnapshot(doc(db, "config", "payment"), (snapshot) => {
+      if (snapshot.exists()) {
+        setPaymentConfig(snapshot.data().settings);
       }
-      snapshot.docs.forEach(doc => {
-        if (doc.id === 'payment') setPaymentConfig(doc.data().settings);
-        if (doc.id === 'smtp') setSmtpConfig(doc.data().settings);
-      });
-      setLoading(false);
     }, (error) => {
-      console.error("Config fetch error:", error);
-      setLoading(false);
-      // We don't throw here to avoid getting stuck in loading, 
-      // but the ErrorBoundary will still catch other errors.
+      console.error("Payment config fetch error:", error);
     });
-    return () => unsubscribe();
+
+    const unsubscribeSmtp = onSnapshot(doc(db, "config", "smtp"), (snapshot) => {
+      if (snapshot.exists()) {
+        setSmtpConfig(snapshot.data().settings);
+      }
+    }, (error) => {
+      console.error("SMTP config fetch error:", error);
+    });
+
+    setLoading(false);
+    return () => {
+      unsubscribePayment();
+      unsubscribeSmtp();
+    };
   }, []);
 
   const saveConfig = async (type: string, settings: any) => {
     if (type === 'payment') {
-      if (settings.publicKey && !settings.publicKey.startsWith('pk_')) {
-        alert("Erro: A 'Stripe Public Key' deve começar com 'pk_'.");
+      if (settings.webhookSecret && !settings.webhookSecret.startsWith('whsec_')) {
+        alert("Erro: O 'Stripe Webhook Secret' deve começar com 'whsec_'.");
         return;
       }
       if (settings.secretKey && !settings.secretKey.startsWith('sk_')) {
@@ -2846,51 +2856,44 @@ const ConfigManagement = () => {
       <section>
         <div className="flex items-center gap-3 mb-6">
           <CreditCard className="text-vialinks-orange w-6 h-6" />
-          <h2 className="text-xl font-bold text-slate-900">Configuração de Pagamento (Stripe)</h2>
+          <h2 className="text-xl font-bold text-slate-900">Configuração de Pagamento (Planos)</h2>
         </div>
         <div className="p-8 bg-slate-50 rounded-3xl border border-slate-100 space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">
-              Stripe Public Key (pk_...)
-              {paymentConfig?.publicKey && (
-                <span className="ml-2 text-emerald-500 normal-case font-normal">
-                  (Salva: {paymentConfig.publicKey.substring(0, 8)}...)
-                </span>
-              )}
-            </label>
+            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Link de Pagamento - Plano Start</label>
             <input 
-              type="text" 
-              placeholder="pk_live_..."
+              type="url" 
+              placeholder="https://buy.stripe.com/..."
               className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-vialinks-orange"
-              value={paymentConfig?.publicKey || ""}
-              onChange={e => setPaymentConfig({...paymentConfig, publicKey: e.target.value})}
+              value={paymentConfig?.planStartLink || ""}
+              onChange={e => setPaymentConfig({...paymentConfig, planStartLink: e.target.value})}
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">
-              Stripe Secret Key (sk_...)
-              {paymentConfig?.secretKey && (
-                <span className="ml-2 text-emerald-500 normal-case font-normal">
-                  (Salva: {paymentConfig.secretKey.substring(0, 8)}...)
-                </span>
-              )}
-            </label>
+            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Link de Pagamento - Plano Profissional + NFC</label>
             <input 
-              type="password" 
-              placeholder="sk_live_..."
+              type="url" 
+              placeholder="https://buy.stripe.com/..."
               className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-vialinks-orange"
-              value={paymentConfig?.secretKey || ""}
-              onChange={e => setPaymentConfig({...paymentConfig, secretKey: e.target.value})}
+              value={paymentConfig?.planProLink || ""}
+              onChange={e => setPaymentConfig({...paymentConfig, planProLink: e.target.value})}
             />
-            <p className="mt-1 text-[10px] text-slate-400 italic">
-              A chave secreta é protegida e não é exibida por completo por segurança.
-            </p>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Link de Pagamento - Plano Business</label>
+            <input 
+              type="url" 
+              placeholder="https://buy.stripe.com/..."
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-vialinks-orange"
+              value={paymentConfig?.planBusinessLink || ""}
+              onChange={e => setPaymentConfig({...paymentConfig, planBusinessLink: e.target.value})}
+            />
           </div>
           <button 
             onClick={() => saveConfig('payment', paymentConfig)}
-            className="bg-vialinks-purple text-white px-8 py-3 rounded-xl font-bold"
+            className="bg-vialinks-purple text-white px-8 py-3 rounded-xl font-bold hover:bg-vialinks-purple/90 transition-all"
           >
-            Salvar Configuração Stripe
+            Salvar Links dos Planos
           </button>
         </div>
       </section>
@@ -2960,6 +2963,7 @@ const ProductManagement = () => {
     description: "",
     price: 0,
     imageUrl: "",
+    paymentLink: "",
     active: true
   });
 
@@ -2981,7 +2985,7 @@ const ProductManagement = () => {
         createdAt: Timestamp.now()
       });
       setIsAdding(false);
-      setNewProduct({ name: "", description: "", price: 0, imageUrl: "", active: true });
+      setNewProduct({ name: "", description: "", price: 0, imageUrl: "", paymentLink: "", active: true });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, "products");
     }
@@ -3042,15 +3046,27 @@ const ProductManagement = () => {
               onChange={e => setNewProduct({...newProduct, description: e.target.value})}
             />
           </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">URL da Imagem</label>
-            <input 
-              type="text" 
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-vialinks-orange"
-              placeholder="https://exemplo.com/imagem.png"
-              value={newProduct.imageUrl}
-              onChange={e => setNewProduct({...newProduct, imageUrl: e.target.value})}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Link de Pagamento (Direto)</label>
+              <input 
+                type="text" 
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-vialinks-orange"
+                placeholder="https://buy.stripe.com/..."
+                value={newProduct.paymentLink}
+                onChange={e => setNewProduct({...newProduct, paymentLink: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">URL da Imagem</label>
+              <input 
+                type="text" 
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-vialinks-orange"
+                placeholder="https://exemplo.com/imagem.png"
+                value={newProduct.imageUrl}
+                onChange={e => setNewProduct({...newProduct, imageUrl: e.target.value})}
+              />
+            </div>
           </div>
           <button type="submit" className="w-full bg-vialinks-purple text-white py-4 rounded-xl font-bold">
             Salvar Produto
@@ -3069,9 +3085,14 @@ const ProductManagement = () => {
                   <div className="w-full h-full flex items-center justify-center text-slate-400"><ShoppingBag /></div>
                 )}
               </div>
-              <div>
-                <p className="font-bold text-slate-900">{p.name}</p>
-                <p className="text-sm text-slate-500">R$ {p.price}</p>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-slate-900 truncate">{p.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-bold text-vialinks-purple">R$ {p.price}</p>
+                  {p.paymentLink && (
+                    <span className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold">POSSUI LINK</span>
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -3122,6 +3143,13 @@ const StoreListing = ({ user }: { user: any }) => {
 
   const handleBuy = async (product: any) => {
     try {
+      // If we are in the store view, let's use the local storage/state to "buy"
+      // In the current architecture, StoreListing is used both in Admin and potentially client dashboard.
+      // We want this to lead to the CheckoutView in App.tsx.
+      
+      // For now, let's make it more generic: if it has a direct link, we'll suggest using that if they want immediate purchase, 
+      // but the USER wants DATA COLLECTION FIRST.
+      
       const saleRef = doc(collection(db, "sales"));
       await setDoc(saleRef, {
         userId: user.uid,
@@ -3133,11 +3161,19 @@ const StoreListing = ({ user }: { user: any }) => {
           quantity: 1
         }],
         amount: product.price,
-        status: "pending",
-        type: "product",
+        status: "lead_captured",
+        type: "product_interest",
         createdAt: serverTimestamp()
       });
-      alert("Pedido realizado com sucesso! Em breve entraremos em contato para o pagamento.");
+
+      if (product.paymentLink) {
+        // Instead of immediate redirect, we notify and then redirect
+        // Or better: we redirect to the checkout flow if it's the main app.
+        // If this is the dashboard, we can just redirect to Stripe now as they are already logged in.
+        window.location.href = product.paymentLink;
+      } else {
+        alert("Interesse registrado! Nossa equipe entrará em contato.");
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, "sales");
     }
@@ -3173,7 +3209,7 @@ const StoreListing = ({ user }: { user: any }) => {
                   onClick={() => handleBuy(p)}
                   className="bg-vialinks-orange text-white px-4 py-2 rounded-xl text-sm font-bold hover:scale-105 transition-transform"
                 >
-                  Comprar Agora
+                  {p.paymentLink ? "Comprar Agora" : "Solicitar"}
                 </button>
               </div>
             </div>
@@ -3580,6 +3616,40 @@ export const LoginView = ({ setView, setUser }: any) => {
   const [password, setPassword] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  const [verifyEmail, setVerifyEmail] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [showVerify, setShowVerify] = useState(false);
+
+  const handleVerifyPayment = async () => {
+    if (!verifyEmail || !verifyEmail.includes('@')) {
+      alert("Por favor, insira o e-mail que você usou no Stripe.");
+      return;
+    }
+    setIsVerifying(true);
+    try {
+      // Look for a successful sale with this email
+      const q = query(
+        collection(db, "sales"), 
+        where("email", "==", verifyEmail),
+        where("status", "==", "completed")
+      );
+      const snapshot = await getDocs(q);
+      
+      if (!snapshot.empty) {
+        alert("✅ Pagamento Confirmado! Seu acesso foi liberado. Use este e-mail para entrar.");
+        setEmail(verifyEmail);
+        setShowVerify(false);
+      } else {
+        alert("Ainda não encontramos um pagamento confirmado para este e-mail. Se você pagou agora, pode levar até 2 minutos para o Stripe nos avisar.");
+      }
+    } catch (error) {
+      console.error("Verification error:", error);
+      alert("Erro ao verificar pagamento. Tente novamente em instantes.");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
 
   const checkAccessAndLogin = async (uid: string, email?: string | null) => {
     // Anyone who reaches this point (authenticated) can access
@@ -3708,6 +3778,43 @@ export const LoginView = ({ setView, setUser }: any) => {
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" loading="lazy" />
             Entrar com Google
           </button>
+        </div>
+
+        <div className="mt-8 pt-6 border-t border-slate-100 text-center">
+          {!showVerify ? (
+            <button 
+              onClick={() => setShowVerify(true)}
+              className="text-xs font-bold text-slate-400 hover:text-vialinks-purple transition-colors flex items-center justify-center gap-2 mx-auto"
+            >
+              <CreditCard className="w-3 h-3" /> Já pagou via Stripe? Clique aqui para liberar
+            </button>
+          ) : (
+            <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Verificar Pagamento</p>
+              <div className="flex gap-2">
+                <input 
+                  type="email" 
+                  placeholder="E-mail usado no Stripe" 
+                  className="flex-grow px-3 py-2 text-xs rounded-lg border border-slate-200 outline-none focus:ring-2 focus:ring-vialinks-purple"
+                  value={verifyEmail}
+                  onChange={e => setVerifyEmail(e.target.value)}
+                />
+                <button 
+                  onClick={handleVerifyPayment}
+                  disabled={isVerifying}
+                  className="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-black transition-colors disabled:opacity-50"
+                >
+                  {isVerifying ? <Loader2 className="w-3 h-3 animate-spin" /> : "Verificar"}
+                </button>
+              </div>
+              <button 
+                onClick={() => setShowVerify(false)}
+                className="text-[10px] text-slate-400 hover:underline"
+              >
+                Voltar
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="mt-6 text-center">

@@ -57,7 +57,7 @@ export async function createApp() {
       key = configDoc.data()?.settings?.secretKey;
     }
     if (!key) throw new Error("Stripe Key Missing");
-    stripeClient = new Stripe(key.trim(), { apiVersion: '2025-01-27' as any });
+    stripeClient = new Stripe(key.trim(), { apiVersion: '2024-11-20.acacia' as any });
     return stripeClient;
   };
 

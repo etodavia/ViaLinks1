@@ -27,14 +27,25 @@ async function getStripe(db: admin.firestore.Firestore | null) {
     }
   }
   if (!key) throw new Error("Missing Stripe Key");
-  return new Stripe(key.trim(), { apiVersion: '2025-01-27' as any });
+  return new Stripe(key.trim(), { apiVersion: '2024-11-20.acacia' as any });
 }
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
 
   const sig = req.headers['stripe-signature'];
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  let webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || process.env.STRIPE_WEBHOOK_KEY;
+
+  const db = initFirebase();
+
+  if (!webhookSecret && db) {
+    try {
+      const configDoc = await db.collection('config').doc('payment').get();
+      webhookSecret = configDoc.data()?.settings?.webhookSecret;
+    } catch (err) {
+      console.error("[Webhook] Failed Webhook Secret fetch:", err);
+    }
+  }
 
   if (!sig || !webhookSecret) {
     console.error("[Webhook] Missing sig or secret");
@@ -42,7 +53,6 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const db = initFirebase();
     const stripe = await getStripe(db);
     
     // Vercel handles raw body or we might need it if buffer is available.

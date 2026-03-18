@@ -27,7 +27,7 @@ async function getStripe(db: admin.firestore.Firestore | null) {
     }
   }
   if (!key) throw new Error("Missing Stripe Key");
-  return new Stripe(key.trim(), { apiVersion: '2025-01-27' as any });
+  return new Stripe(key.trim(), { apiVersion: '2024-11-20.acacia' as any });
 }
 
 export default async function handler(req: any, res: any) {

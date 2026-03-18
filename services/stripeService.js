@@ -9,7 +9,7 @@ export class StripeService {
             throw new Error("STRIPE_SECRET_KEY not found in environment variables.");
         }
         this.stripe = new Stripe(key, {
-            apiVersion: '2025-01-27.acacia',
+            apiVersion: '2024-11-20.acacia',
         });
         return this.stripe;
     }
