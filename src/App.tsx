@@ -1179,24 +1179,16 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPlans = async () => {
-      try {
-        const response = await fetch('/api/plans');
-        if (!response.ok) throw new Error("Falha ao carregar planos");
-        const plansData = await response.json();
-        
-        const activePlans = plansData
-          .filter((p: any) => p.active !== false)
+    // Read plans directly from Firestore 'plans' collection (same source as admin dashboard)
+    const q = query(collection(db, "plans"), where("active", "==", true));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        const plansData = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
           .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
-
-        if (activePlans.length === 0) {
-          throw new Error("Nenhum plano ativo encontrado");
-        }
-        
-        setPlans(activePlans);
-      } catch (error) {
-        console.warn("Fallback to defaults due to error:", error);
-        // Fallback to default plans if API fails or returns none
+        setPlans(plansData);
+      } else {
+        // Fallback defaults when no plans exist in Firestore yet
         setPlans([
           {
             id: 'default-1',
@@ -1208,7 +1200,8 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
             active: true,
             order: 1,
             popular: false,
-            cta: "Começar Agora"
+            cta: "Começar Agora",
+            paymentLink: ""
           },
           {
             id: 'default-2',
@@ -1220,7 +1213,8 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
             active: true,
             order: 2,
             popular: true,
-            cta: "Mais Vendido"
+            cta: "Mais Vendido",
+            paymentLink: ""
           },
           {
             id: 'default-3',
@@ -1232,15 +1226,18 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
             active: true,
             order: 3,
             popular: false,
-            cta: "Falar com Consultor"
+            cta: "Falar com Consultor",
+            paymentLink: ""
           }
         ]);
-      } finally {
-        setLoading(false);
       }
-    };
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching plans:", error);
+      setLoading(false);
+    });
 
-    fetchPlans();
+    return () => unsubscribe();
   }, []);
 
   return (
