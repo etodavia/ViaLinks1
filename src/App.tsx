@@ -652,8 +652,8 @@ const Hero = ({ content }: { content?: any }) => {
             </div>
           </div>
 
-          <div className="hero-mockup relative flex justify-center lg:justify-end lg:-mr-32 mt-12 lg:mt-8">
-            <div className="relative z-10 max-w-[800px] lg:max-w-none transform scale-[1.35] sm:scale-125 lg:scale-150 origin-center lg:origin-right">
+          <div className="hero-mockup relative flex justify-center lg:justify-end lg:-mr-32 mt-6 lg:mt-8">
+            <div className="relative z-10 max-w-[800px] lg:max-w-none transform scale-110 sm:scale-125 lg:scale-150 origin-center lg:origin-right">
               <FirebaseImage 
                 storagePath={content?.heroImageUrl || "11945874_Card_Phone2.png"} 
                 fallbackUrl="https://ais-dev-g52kgdoyt4kbetthjleoif-84265199171.us-east1.run.app/input_file_0.png"
@@ -1258,7 +1258,7 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-vialinks-orange"></div>
           </div>
         ) : (
-          <div className="grid lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 relative z-20">
             {plans.map((plan, i) => (
               <motion.div
                 key={plan.id}
@@ -1268,9 +1268,9 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
                 transition={{ delay: i * 0.1 }}
                 className={`relative p-8 rounded-3xl border ${
                   plan.popular 
-                    ? 'border-vialinks-purple bg-vialinks-purple text-white shadow-2xl shadow-vialinks-purple/20 scale-105 z-10' 
+                    ? 'border-vialinks-purple bg-vialinks-purple text-white shadow-2xl shadow-vialinks-purple/20 md:scale-105 z-10' 
                     : 'border-white/10 bg-white/5 backdrop-blur-md text-white hover:border-white/20'
-                } flex flex-col transition-all duration-300`}
+                } flex flex-col transition-all duration-300 mb-8 md:mb-0`}
               >
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-vialinks-orange text-white text-xs font-bold px-4 py-1 rounded-full uppercase tracking-widest">
@@ -1908,6 +1908,37 @@ function App() {
           div.innerHTML = tagData.gtmBody;
           document.body.appendChild(div);
         }
+
+        // SEO and Meta Tags Injection
+        if (tagData.seoTitle) document.title = tagData.seoTitle;
+        
+        const updateOrAddMeta = (name: string, content: string, isProperty = false) => {
+          if (!content) return;
+          const attr = isProperty ? 'property' : 'name';
+          let meta = document.querySelector(`meta[${attr}="${name}"]`);
+          if (!meta) {
+            meta = document.createElement('meta');
+            meta.setAttribute(attr, name);
+            document.head.appendChild(meta);
+          }
+          meta.setAttribute('content', content);
+        };
+
+        updateOrAddMeta('description', tagData.seoDescription);
+        updateOrAddMeta('keywords', tagData.seoKeywords);
+        
+        // OpenGraph
+        updateOrAddMeta('og:title', tagData.seoTitle, true);
+        updateOrAddMeta('og:description', tagData.seoDescription, true);
+        updateOrAddMeta('og:image', tagData.seoImage, true);
+        updateOrAddMeta('og:type', 'website', true);
+        updateOrAddMeta('og:url', window.location.href, true);
+        
+        // Twitter
+        updateOrAddMeta('twitter:card', 'summary_large_image');
+        updateOrAddMeta('twitter:title', tagData.seoTitle);
+        updateOrAddMeta('twitter:description', tagData.seoDescription);
+        updateOrAddMeta('twitter:image', tagData.seoImage);
       }
     });
 

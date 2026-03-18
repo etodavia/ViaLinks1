@@ -48,6 +48,7 @@ import {
   Globe,
   Search,
   ArrowRight,
+  Pencil,
   MessageSquare,
   ThumbsUp,
   Star,
@@ -780,8 +781,10 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
 
           <div className="max-w-4xl">
             {activeTab === 'overview' && (
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100">
+              <div className="space-y-8">
+                <BannerCarousel />
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100 shadow-sm">
                   <div className="w-12 h-12 rounded-2xl bg-vialinks-purple/10 flex items-center justify-center mb-6">
                     <CreditCard className="text-vialinks-purple w-6 h-6" />
                   </div>
@@ -808,7 +811,8 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
                   </button>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
             {activeTab === 'briefing' && <BriefingForm user={user} setView={setView} />}
             {activeTab === 'orders' && <OrdersList user={user} />}
@@ -1090,185 +1094,6 @@ const OrdersList = ({ user }: any) => {
   );
 };
 
-const DeliverySection = ({ user }: any) => {
-  const [delivery, setDelivery] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const unsubscribe = onSnapshot(doc(db, "deliveries", user.uid), (doc) => {
-      if (doc.exists()) {
-        setDelivery(doc.data());
-      }
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, [user.uid]);
-
-  if (loading) return <div className="p-8 text-center text-slate-500">Carregando informações de entrega...</div>;
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
-        <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-          <Package className="w-5 h-5 text-vialinks-purple" /> Acompanhamento do Pedido
-        </h3>
-        
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Digital Card Link */}
-          <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-vialinks-purple/10 flex items-center justify-center">
-                <Globe className="text-vialinks-purple w-5 h-5" />
-              </div>
-              <h4 className="font-bold text-slate-900">Link do seu Card</h4>
-            </div>
-            {delivery?.cardLink ? (
-              <div className="space-y-3">
-                <p className="text-sm text-slate-500">Seu card digital já está online!</p>
-                <a 
-                  href={delivery.cardLink} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200 text-vialinks-purple font-bold text-sm hover:border-vialinks-purple transition-all"
-                >
-                  {delivery.cardLink.replace('https://', '')}
-                  <Eye className="w-4 h-4" />
-                </a>
-              </div>
-            ) : (
-              <p className="text-sm text-slate-400 italic">O link do seu card será disponibilizado assim que a produção for concluída.</p>
-            )}
-          </div>
-
-          {/* Physical Card Tracking */}
-          <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-vialinks-orange/10 flex items-center justify-center">
-                <Truck className="text-vialinks-orange w-5 h-5" />
-              </div>
-              <h4 className="font-bold text-slate-900">Rastreio do Card Físico</h4>
-            </div>
-            <div className="space-y-3">
-            <div className="space-y-6">
-              <div className="relative pt-4 pb-8">
-                {/* Progress Line */}
-                <div className="absolute top-8 left-0 w-full h-1 bg-slate-100 rounded-full" />
-                <div 
-                  className="absolute top-8 left-0 h-1 bg-vialinks-purple transition-all duration-500 rounded-full"
-                  style={{ 
-                    width: `${
-                      delivery?.status === 'pending' ? '0%' :
-                      delivery?.status === 'design' ? '25%' :
-                      delivery?.status === 'confirmation' ? '50%' :
-                      delivery?.status === 'production' ? '75%' :
-                      delivery?.status === 'shipped' || delivery?.status === 'delivered' ? '100%' : '0%'
-                    }` 
-                  }}
-                />
-
-                {/* Steps */}
-                <div className="relative flex justify-between">
-                  {[
-                    { id: 'pending', label: 'Briefing' },
-                    { id: 'design', label: 'Arte/Design' },
-                    { id: 'confirmation', label: 'Aprovação' },
-                    { id: 'production', label: 'Produção' },
-                    { id: 'shipped', label: 'Envio' }
-                  ].map((step, idx) => {
-                    const statuses = ['pending', 'design', 'confirmation', 'production', 'shipped', 'delivered'];
-                    const currentIdx = statuses.indexOf(delivery?.status || 'pending');
-                    const stepIdx = statuses.indexOf(step.id);
-                    const isCompleted = currentIdx > stepIdx || delivery?.status === 'delivered';
-                    const isActive = currentIdx === stepIdx;
-
-                    return (
-                      <div key={step.id} className="flex flex-col items-center gap-2">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all ${
-                          isCompleted ? 'bg-vialinks-purple border-vialinks-purple text-white' : 
-                          isActive ? 'bg-white border-vialinks-purple text-vialinks-purple shadow-lg shadow-vialinks-purple/20 scale-110' : 
-                          'bg-white border-slate-200 text-slate-300'
-                        }`}>
-                          {isCompleted ? <Check className="w-4 h-4" /> : <span className="text-[10px] font-bold">{idx + 1}</span>}
-                        </div>
-                        <span className={`text-[9px] font-black uppercase tracking-wider ${
-                          isCompleted || isActive ? 'text-slate-900' : 'text-slate-300'
-                        }`}>
-                          {step.label}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="p-4 bg-vialinks-purple/5 rounded-2xl border border-vialinks-purple/10 flex items-center justify-center gap-2">
-                 <div className="w-2 h-2 rounded-full bg-vialinks-purple animate-pulse" />
-                 <p className="text-sm font-bold text-vialinks-purple">
-                  Status Atual: {
-                    delivery?.status === 'pending' ? 'Aguardando Briefing' :
-                    delivery?.status === 'design' ? 'Em Criação de Arte' :
-                    delivery?.status === 'confirmation' ? 'Aguardando Aprovação' :
-                    delivery?.status === 'production' ? 'Em Produção Física' :
-                    delivery?.status === 'shipped' ? 'Enviado / Em Trânsito' :
-                    delivery?.status === 'delivered' ? 'Entregue com Sucesso' : 'Processando pedido...'
-                  }
-                </p>
-              </div>
-            </div>
-              {delivery?.trackingCode ? (
-                <div className="space-y-2">
-                  <p className="text-xs text-slate-500">Código de Rastreio:</p>
-                  <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200 font-mono text-sm">
-                    {delivery.trackingCode}
-                    {delivery.trackingUrl && (
-                      <a 
-                        href={delivery.trackingUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-vialinks-orange hover:underline font-bold text-xs"
-                      >
-                        RASTREAR
-                      </a>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-slate-400 italic">As informações de rastreio aparecerão aqui após o envio.</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Bonus PDF */}
-        <div className="mt-6 p-6 rounded-2xl bg-emerald-50 border border-emerald-100">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                <Download className="text-emerald-600 w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="font-bold text-slate-900">Seu Bônus Exclusivo</h4>
-                <p className="text-xs text-slate-500">Baixe o PDF de bônus que preparamos para você.</p>
-              </div>
-            </div>
-            {delivery?.bonusPdfUrl ? (
-              <a 
-                href={delivery.bonusPdfUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="bg-emerald-500 text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-emerald-600 transition-all flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" /> Baixar PDF
-              </a>
-            ) : (
-              <span className="text-xs font-bold text-emerald-600/50 uppercase">Disponível em breve</span>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export const StoreTab = ({ user, setView, onAddToCart }: any) => {
   const [plans, setPlans] = useState<any[]>([]);
@@ -1548,6 +1373,12 @@ export const AdminDashboard = ({ user, setView, onLogout, onOpenCart, cartCount 
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'testimonials' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
               >
                 <MessageSquare className="w-5 h-5" /> Depoimentos
+              </button>
+              <button 
+                onClick={() => setActiveTab('banners')}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'banners' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+              >
+                <ImageIcon className="w-5 h-5" /> Banners Dashboard
               </button>
               <button 
                 onClick={() => setActiveTab('plans')}
@@ -1913,7 +1744,7 @@ export const AdminDashboard = ({ user, setView, onLogout, onOpenCart, cartCount 
                 </div>
               )}
 
-          {activeTab === 'deliveries' && <DeliveryManagement />}
+
           {activeTab === 'users' && (
             <div className="space-y-4">
               {users.map((u: any) => (
@@ -1991,6 +1822,7 @@ export const AdminDashboard = ({ user, setView, onLogout, onOpenCart, cartCount 
           )}
 
           {activeTab === 'products' && <ProductManagement />}
+          {activeTab === 'banners' && <AdminBannerManagement />}
           {activeTab === 'plans' && <PlanManagement />}
           {activeTab === 'tags' && <TagManagement />}
           {activeTab === 'content' && <ContentManagement />}
@@ -2293,7 +2125,11 @@ const TagManagement = () => {
     gtmBody: "",
     metaPixel: "",
     pinterestPixel: "",
-    linkedinPixel: ""
+    linkedinPixel: "",
+    seoTitle: "",
+    seoDescription: "",
+    seoKeywords: "",
+    seoImage: ""
   });
   const [loading, setLoading] = useState(true);
 
@@ -2335,28 +2171,33 @@ const TagManagement = () => {
       <div className="grid gap-6">
         <div className="p-8 bg-slate-50 rounded-3xl border border-slate-100 space-y-4">
           <h3 className="font-bold text-slate-800">Google Tag Manager</h3>
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Código Header (Head)</label>
-            <textarea 
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-vialinks-orange font-mono text-xs h-32"
-              value={tags.gtmHeader}
-              onChange={e => setTags({...tags, gtmHeader: e.target.value})}
-              placeholder="<!-- Google Tag Manager --> ..."
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Código Body (Noscript)</label>
-            <textarea 
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-vialinks-orange font-mono text-xs h-32"
-              value={tags.gtmBody}
-              onChange={e => setTags({...tags, gtmBody: e.target.value})}
-              placeholder="<!-- Google Tag Manager (noscript) --> ..."
-            />
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Código Header (Head)</label>
+              <textarea 
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-vialinks-orange font-mono text-xs h-32"
+                value={tags.gtmHeader}
+                onChange={e => setTags({...tags, gtmHeader: e.target.value})}
+                placeholder="<!-- Google Tag Manager --> ..."
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Código Body (Noscript)</label>
+              <textarea 
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-vialinks-orange font-mono text-xs h-32"
+                value={tags.gtmBody}
+                onChange={e => setTags({...tags, gtmBody: e.target.value})}
+                placeholder="<!-- Google Tag Manager (noscript) --> ..."
+              />
+            </div>
           </div>
         </div>
 
         <div className="p-8 bg-slate-50 rounded-3xl border border-slate-100 space-y-4">
-          <h3 className="font-bold text-slate-800">Pixels de Redes Sociais</h3>
+          <div className="flex items-center gap-2 mb-4">
+            <Smartphone className="text-vialinks-orange w-5 h-5" />
+            <h3 className="font-bold text-slate-800">Pixels de Redes Sociais</h3>
+          </div>
           <div className="grid md:grid-cols-3 gap-6">
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Meta Pixel (Facebook)</label>
@@ -2385,11 +2226,58 @@ const TagManagement = () => {
           </div>
         </div>
 
+        <div className="p-8 bg-slate-50 rounded-3xl border border-slate-100 space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Globe className="text-vialinks-purple w-5 h-5" />
+            <h3 className="font-bold text-slate-800">SEO e Meta Dados (Busca e IA)</h3>
+          </div>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Título SEO (Destaque em buscas)</label>
+              <input 
+                type="text"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-vialinks-purple text-sm"
+                value={tags.seoTitle}
+                onChange={e => setTags({...tags, seoTitle: e.target.value})}
+                placeholder="ViaLinks - Seu Card Digital Profissional"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <ImageUpload 
+                label="Imagem de Destaque (OG Image - Sugerido 1200x630)"
+                path="seo"
+                currentUrl={tags.seoImage}
+                onUpload={url => setTags({...tags, seoImage: url})}
+              />
+              <p className="text-[10px] text-slate-400 mt-2 font-mono break-all">{tags.seoImage || "Nenhuma imagem selecionada"}</p>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Descrição SEO (Resumo para Google e IA)</label>
+              <textarea 
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-vialinks-purple text-sm h-24"
+                value={tags.seoDescription}
+                onChange={e => setTags({...tags, seoDescription: e.target.value})}
+                placeholder="Crie seu card digital profissional em minutos..."
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Palavras-chave (Separadas por vírgula)</label>
+              <input 
+                type="text"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-vialinks-purple text-sm"
+                value={tags.seoKeywords}
+                onChange={e => setTags({...tags, seoKeywords: e.target.value})}
+                placeholder="card digital, link na bio, marketing"
+              />
+            </div>
+          </div>
+        </div>
+
         <button 
           onClick={saveTags}
-          className="bg-vialinks-purple text-white px-8 py-4 rounded-xl font-bold shadow-lg shadow-vialinks-purple/20 w-full"
+          className="bg-vialinks-orange text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-vialinks-orange/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 w-full"
         >
-          Salvar Todas as Tags
+          <ShieldCheck className="w-5 h-5" /> Salvar Configurações de SEO e Tags
         </button>
       </div>
     </div>
@@ -4645,8 +4533,451 @@ const AdminAbandonedCart = () => {
   );
 };
 
+const DeliverySection = ({ user }: { user: any }) => {
+  const [delivery, setDelivery] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, "deliveries", user.uid), (snap) => {
+      if (snap.exists()) {
+        setDelivery({ id: snap.id, ...snap.data() });
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, [user.uid]);
+
+  const stages = [
+    { key: 'pending', label: 'Briefing', icon: <ClipboardList className="w-5 h-5" /> },
+    { key: 'design', label: 'Design', icon: <Zap className="w-5 h-5" /> },
+    { key: 'confirmation', label: 'Aprovação', icon: <Check className="w-5 h-5" /> },
+    { key: 'production', label: 'Produção', icon: <Layers className="w-5 h-5" /> },
+    { key: 'shipped', label: 'Envio', icon: <Truck className="w-5 h-5" /> },
+    { key: 'delivered', label: 'Entregue', icon: <Package className="w-5 h-5" /> }
+  ];
+
+  const getStatusIndex = (status: string) => {
+    const idx = stages.findIndex(s => s.key === status);
+    return idx === -1 ? 0 : idx;
+  };
+
+  if (loading) return <div className="p-8 text-center text-slate-500">Carregando status da entrega...</div>;
+
+  const currentIndex = getStatusIndex(delivery?.status || 'pending');
+
+  return (
+    <div className="space-y-8">
+      <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-xl shadow-slate-200/50">
+        <h3 className="text-2xl font-black text-slate-900 mb-10 flex items-center gap-3">
+          <Truck className="w-8 h-8 text-vialinks-purple" /> 
+          Acompanhamento de Entrega
+        </h3>
+
+        {/* Visual Tracker */}
+        <div className="relative mb-16">
+          <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-100 -translate-y-1/2 rounded-full overflow-hidden">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${(currentIndex / (stages.length - 1)) * 100}%` }}
+              className="h-full bg-vialinks-purple"
+            />
+          </div>
+          <div className="relative flex justify-between">
+            {stages.map((stage, i) => {
+              const isCompleted = i < currentIndex;
+              const isActive = i === currentIndex;
+              const isLast = i === stages.length - 1;
+
+              if (i === stages.length - 1 && delivery?.status !== 'delivered' && currentIndex < stages.length - 1) {
+                 // Skip delivered step if not yet delivered for cleaner 5-step look, 
+                 // but let's keep all 6 to be consistent with admin
+              }
+
+              return (
+                <div key={stage.key} className="flex flex-col items-center gap-3 relative z-10">
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 ${isCompleted ? 'bg-vialinks-purple text-white' : isActive ? 'bg-white border-4 border-vialinks-purple text-vialinks-purple scale-110 shadow-lg shadow-vialinks-purple/20' : 'bg-white border-2 border-slate-100 text-slate-300'}`}>
+                    {isCompleted ? <Check className="w-6 h-6" /> : stage.icon}
+                  </div>
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${isActive ? 'text-vialinks-purple' : 'text-slate-400'}`}>
+                    {stage.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Detailed Status */}
+        <div className="grid md:grid-cols-2 gap-8">
+          <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100">
+            <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Informações do Card</h4>
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs text-slate-400 font-bold uppercase mb-1">Status Atual</p>
+                <div className="inline-block bg-vialinks-purple/10 text-vialinks-purple font-black px-4 py-1.5 rounded-full text-sm">
+                  {stages[currentIndex].label}
+                </div>
+              </div>
+              {delivery?.cardLink && (
+                <div>
+                  <p className="text-xs text-slate-400 font-bold uppercase mb-1">Link do seu Card Digital</p>
+                  <a href={delivery.cardLink} target="_blank" rel="noopener noreferrer" className="text-vialinks-purple font-bold hover:underline break-all">
+                    {delivery.cardLink}
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100">
+            <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Logística e Bônus</h4>
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs text-slate-400 font-bold uppercase mb-1">Rastreio Físico</p>
+                {delivery?.trackingCode ? (
+                  <div className="space-y-2">
+                    <p className="text-sm font-extrabold text-slate-700">{delivery.trackingCode}</p>
+                    {delivery.trackingUrl && (
+                      <a href={delivery.trackingUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-bold text-vialinks-purple hover:underline">
+                        Acompanhar no site do parceiro <ArrowRight className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400 italic">Disponível em breve após o envio.</p>
+                )}
+              </div>
+              {delivery?.bonusPdfUrl && (
+                <div className="pt-2">
+                  <a 
+                    href={delivery.bonusPdfUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="flex items-center justify-center gap-2 w-full bg-emerald-500 text-white py-3 rounded-xl font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20"
+                  >
+                    <Download className="w-4 h-4" /> Baixar PDF Bônus
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ShoppingCartIcon = ({ className }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
   </svg>
 );
+
+const AdminBannerManagement = () => {
+  const [banners, setBanners] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [newBanner, setNewBanner] = useState({
+    imageUrl: "",
+    link: "",
+    active: true,
+    order: 0
+  });
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const q = query(collection(db, "banners"), orderBy("order", "asc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setBanners(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const storageRef = ref(storage, `banners/${Date.now()}_${file.name}`);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      uploadTask.on(
+        "state_changed",
+        null,
+        (error) => {
+          console.error("Upload error:", error);
+          setUploading(false);
+        },
+        async () => {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          setNewBanner({ ...newBanner, imageUrl: downloadURL });
+          setUploading(false);
+        }
+      );
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      setUploading(false);
+    }
+  };
+
+  const handleAddBanner = async () => {
+    if (!newBanner.imageUrl) {
+      alert("Por favor, selecione uma imagem.");
+      return;
+    }
+
+    try {
+      await setDoc(doc(collection(db, "banners")), {
+        ...newBanner,
+        createdAt: serverTimestamp()
+      });
+      setNewBanner({ imageUrl: "", link: "", active: true, order: banners.length });
+      alert("Banner adicionado com sucesso!");
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, "banners");
+    }
+  };
+
+  const handleUpdateBanner = async () => {
+    if (!editingId) return;
+    try {
+      await updateDoc(doc(db, "banners", editingId), {
+        ...newBanner,
+        updatedAt: serverTimestamp()
+      });
+      setEditingId(null);
+      setNewBanner({ imageUrl: "", link: "", active: true, order: banners.length });
+      alert("Banner atualizado com sucesso!");
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `banners/${editingId}`);
+    }
+  };
+
+  const startEdit = (banner: any) => {
+    setEditingId(banner.id);
+    setNewBanner({
+      imageUrl: banner.imageUrl,
+      link: banner.link || "",
+      active: banner.active,
+      order: banner.order
+    });
+    // Find the form container and scroll to it
+    const formElement = document.getElementById('banner-form');
+    formElement?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const toggleStatus = async (id: string, currentStatus: boolean) => {
+    try {
+      await updateDoc(doc(db, "banners", id), { active: !currentStatus });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `banners/${id}`);
+    }
+  };
+
+  const deleteBanner = async (id: string) => {
+    if (confirm("Deseja excluir este banner?")) {
+      try {
+        await deleteDoc(doc(db, "banners", id));
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, `banners/${id}`);
+      }
+    }
+  };
+
+  if (loading) return <div className="p-8 text-center text-slate-500">Carregando banners...</div>;
+
+  return (
+    <div className="space-y-8">
+      <div id="banner-form" className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
+        <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center justify-between">
+          <span className="flex items-center gap-2">
+            <ImageIcon className="w-6 h-6 text-vialinks-purple" /> 
+            {editingId ? "Editar Banner" : "Novo Banner"}
+          </span>
+          {editingId && (
+            <button 
+              onClick={() => {
+                setEditingId(null);
+                setNewBanner({ imageUrl: "", link: "", active: true, order: banners.length });
+              }}
+              className="text-xs text-slate-400 hover:text-slate-600 font-bold"
+            >
+              Cancelar Edição
+            </button>
+          )}
+        </h3>
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div className="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center relative overflow-hidden group">
+              {newBanner.imageUrl ? (
+                <div className="relative group">
+                  <img src={newBanner.imageUrl} alt="Preview" className="w-full h-32 object-cover rounded-xl" />
+                  <button 
+                    onClick={() => setNewBanner({...newBanner, imageUrl: ""})}
+                    className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <label className="cursor-pointer block">
+                  <Upload className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                  <p className="text-sm font-bold text-slate-400">Clique para subir imagem (1200x300 recomendado)</p>
+                  <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} disabled={uploading} />
+                </label>
+              )}
+              {uploading && (
+                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-vialinks-purple animate-spin" />
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Link de Destino (Opcional)</label>
+              <input 
+                type="text"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-vialinks-purple outline-none"
+                placeholder="https://..."
+                value={newBanner.link}
+                onChange={e => setNewBanner({...newBanner, link: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Ordem</label>
+              <input 
+                type="number"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-vialinks-purple outline-none"
+                value={newBanner.order}
+                onChange={e => setNewBanner({...newBanner, order: parseInt(e.target.value) || 0})}
+              />
+            </div>
+            <button 
+              onClick={editingId ? handleUpdateBanner : handleAddBanner}
+              disabled={uploading || !newBanner.imageUrl}
+              className={`w-full py-4 rounded-xl font-bold shadow-lg transition-all disabled:opacity-50 ${
+                editingId 
+                  ? 'bg-emerald-500 text-white shadow-emerald-500/20 hover:bg-emerald-600' 
+                  : 'bg-vialinks-purple text-white shadow-vialinks-purple/20 hover:scale-[1.02] active:scale-[0.98]'
+              }`}
+            >
+              {uploading ? "Subindo..." : (editingId ? "Salvar Alterações" : "Adicionar Banner")}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6">
+        {banners.map((banner) => (
+          <div key={banner.id} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row gap-6 items-center">
+            <img src={banner.imageUrl} alt="Banner" className="w-full md:w-64 h-24 object-cover rounded-xl border border-slate-100" />
+            <div className="flex-1 space-y-1">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Link do Banner</p>
+              <p className="text-slate-900 font-medium truncate max-w-md">{banner.link || "Sem link"}</p>
+              <p className="text-[10px] text-slate-400">Ordem: {banner.order}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => startEdit(banner)}
+                className="p-3 text-slate-400 hover:text-vialinks-purple hover:bg-slate-50 rounded-xl transition-all"
+                title="Editar Banner"
+              >
+                <Pencil className="w-5 h-5" />
+              </button>
+              <button 
+                onClick={() => toggleStatus(banner.id, banner.active)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${banner.active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}
+              >
+                {banner.active ? "Ativo" : "Inativo"}
+              </button>
+              <button 
+                onClick={() => deleteBanner(banner.id)}
+                className="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                title="Excluir Banner"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const BannerCarousel = () => {
+  const [banners, setBanners] = useState<any[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    const q = query(collection(db, "banners"), where("active", "==", true), orderBy("order", "asc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setBanners(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (banners.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % banners.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [banners]);
+
+  if (banners.length === 0) return null;
+
+  const current = banners[currentIndex];
+
+  const contentMarkup = (
+    <div className="relative w-full h-40 md:h-56 lg:h-64 rounded-[2.5rem] overflow-hidden group mb-12 shadow-2xl shadow-slate-200/50 border border-slate-100/50">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={current.id || currentIndex}
+          initial={{ opacity: 0, scale: 1.05 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="absolute inset-0"
+        >
+          <img 
+            src={current.imageUrl} 
+            alt="Banner Promo" 
+            className="w-full h-full object-cover"
+          />
+          {/* Subtle Overlay for better contrast if needed */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        </motion.div>
+      </AnimatePresence>
+      
+      {banners.length > 1 && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-3 z-10">
+          {banners.map((_, i) => (
+            <button 
+              key={i} 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setCurrentIndex(i);
+              }}
+              className={`h-1.5 rounded-full transition-all duration-500 ${i === currentIndex ? 'w-10 bg-white shadow-lg' : 'w-2 bg-white/40 hover:bg-white/60'}`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  if (current.link) {
+    return (
+      <a href={current.link} target="_blank" rel="noopener noreferrer" className="block hover:scale-[1.01] transition-transform duration-500 ease-out">
+        {contentMarkup}
+      </a>
+    );
+  }
+
+  return contentMarkup;
+};
