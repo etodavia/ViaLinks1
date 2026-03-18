@@ -53,7 +53,8 @@ import {
   Star,
   Truck,
   ShoppingCart,
-  ArrowLeft
+  ArrowLeft,
+  Lock
 } from "lucide-react";
 import { FirebaseImage } from "./FirebaseImage";
 import { auth, db, storage } from "../firebase";
@@ -428,10 +429,144 @@ const TestimonialModeration = () => {
   );
 };
 
+const PaymentGate = ({ user, onPaid }: { user: any; onPaid: () => void }) => {
+  const [purchaseEmail, setPurchaseEmail] = useState(user?.email || "");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pendingApproval, setPendingApproval] = useState(false);
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!purchaseEmail || !purchaseEmail.includes('@')) {
+      setError("Insira um e-mail válido.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Check if there is ANY sale with this email that has status 'paid'
+      const q = query(
+        collection(db, "sales"),
+        where("email", "==", purchaseEmail.toLowerCase().trim()),
+        where("status", "==", "paid")
+      );
+      const snapshot = await getDocs(q);
+
+      if (!snapshot.empty) {
+        // Found a paid sale — link it to the user and unlock the dashboard
+        const saleDoc = snapshot.docs[0];
+        await updateDoc(doc(db, "sales", saleDoc.id), { userId: user.uid });
+        await updateDoc(doc(db, "users", user.uid), { hasPaid: true, purchaseEmail: purchaseEmail.toLowerCase().trim() });
+        onPaid();
+      } else {
+        // Check if there's a pending sale (checkout filled but redirect to Stripe)
+        const qPending = query(
+          collection(db, "sales"),
+          where("email", "==", purchaseEmail.toLowerCase().trim())
+        );
+        const pendingSnap = await getDocs(qPending);
+        if (!pendingSnap.empty) {
+          // Sale exists but not yet confirmed paid — send for manual review
+          await updateDoc(doc(db, "users", user.uid), {
+            purchaseEmail: purchaseEmail.toLowerCase().trim(),
+            hasPaid: false,
+            awaitingVerification: true
+          });
+          setPendingApproval(true);
+        } else {
+          setError("Não encontramos uma compra com esse e-mail. Verifique se digitou corretamente ou entre em contato pelo WhatsApp.");
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Erro ao verificar. Tente novamente ou entre em contato conosco.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (pendingApproval) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white rounded-3xl shadow-lg p-10 text-center space-y-6 border border-slate-100">
+          <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
+            <Loader2 className="w-10 h-10 text-amber-500 animate-spin" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900">Aguardando Confirmação</h2>
+          <p className="text-slate-500 leading-relaxed">
+            Encontramos seu cadastro com o e-mail <strong>{purchaseEmail}</strong>, mas o pagamento ainda não foi confirmado pelo Stripe. Nossa equipe vai verificar e liberar seu acesso em breve.
+          </p>
+          <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100">
+            <p className="text-sm text-amber-700 font-medium">
+              📱 Para agilizar, envie uma mensagem para nosso WhatsApp com o comprovante de pagamento.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+      <div className="max-w-md w-full bg-white rounded-3xl shadow-lg p-10 border border-slate-100">
+        <div className="text-center mb-8">
+          <div className="w-20 h-20 bg-vialinks-purple/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-10 h-10 text-vialinks-purple" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Verificar Compra</h2>
+          <p className="text-slate-500 text-sm leading-relaxed">
+            Para acessar seu painel, confirme o e-mail utilizado na sua compra.
+          </p>
+        </div>
+
+        <form onSubmit={handleVerify} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">E-mail da Compra</label>
+            <input
+              type="email"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-vialinks-purple text-slate-800"
+              placeholder="email@exemplo.com"
+              value={purchaseEmail}
+              onChange={e => setPurchaseEmail(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+
+          {error && (
+            <div className="p-4 bg-red-50 rounded-xl border border-red-100 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-vialinks-purple text-white py-4 rounded-xl font-bold hover:bg-vialinks-purple/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShieldCheck className="w-5 h-5" />}
+            {loading ? "Verificando..." : "Verificar e Liberar Acesso"}
+          </button>
+        </form>
+
+        <div className="mt-8 pt-6 border-t border-slate-100 text-center">
+          <p className="text-xs text-slate-400 mb-4">Ainda não tem um plano?</p>
+          <a href="/#planos" className="text-vialinks-orange font-bold text-sm hover:underline">
+            Ver Planos e Preços →
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCart, cartCount }: any) => {
+
   const [activeTab, setActiveTab] = useState('overview');
   const [showOnboarding, setShowOnboarding] = useState(user?.hasSeenOnboarding === false);
   const [hasActiveOrders, setHasActiveOrders] = useState(false);
+  const [hasPaid, setHasPaid] = useState<boolean | null>(user?.hasPaid === true ? true : null);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -450,14 +585,39 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const active = !snapshot.empty;
       setHasActiveOrders(active);
-      // Force store tab if no orders
-      if (!active) {
+      if (active) {
+        setHasPaid(true);
+        // Force overview on first paid access
+        setActiveTab(prev => prev === 'store' ? 'overview' : prev);
+      } else if (hasPaid !== true) {
         setActiveTab('store');
       }
     });
 
     return () => unsubscribe();
   }, [user.uid, user.role]);
+
+  // Also listen for hasPaid flag directly on the user document
+  useEffect(() => {
+    if (!user?.uid || user.role === 'admin') return;
+    const unsubscribe = onSnapshot(doc(db, "users", user.uid), (snap) => {
+      if (snap.exists() && snap.data().hasPaid === true) {
+        setHasPaid(true);
+        setHasActiveOrders(true);
+      }
+    });
+    return () => unsubscribe();
+  }, [user.uid]);
+
+  // Show PaymentGate while we're still loading (null) or definitively not paid
+  if (hasPaid === null) {
+    // Still loading - show spinner briefly
+    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-12 h-12 text-vialinks-purple animate-spin" /></div>;
+  }
+
+  if (!hasPaid && user.role !== 'admin') {
+    return <PaymentGate user={user} onPaid={() => { setHasPaid(true); setHasActiveOrders(true); setActiveTab('overview'); }} />;
+  }
 
   const handleCompleteOnboarding = async () => {
     try {
@@ -1677,12 +1837,44 @@ export const AdminDashboard = ({ user, setView, onLogout, onOpenCart, cartCount 
                     <div>
                       <p className="font-bold text-slate-900">{u.email}</p>
                       <p className="text-sm text-slate-500">Papel: {u.role}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${u.hasPaid ? 'bg-green-100 text-green-700' : u.awaitingVerification ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
+                          {u.hasPaid ? '✓ Acesso Liberado' : u.awaitingVerification ? '⏳ Aguardando Verificação' : 'Sem Acesso'}
+                        </span>
+                        {u.purchaseEmail && u.purchaseEmail !== u.email && (
+                          <span className="text-[10px] text-slate-400">Email compra: {u.purchaseEmail}</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">
                       <p className="text-[10px] text-slate-400 font-mono">UID: {u.id}</p>
                     </div>
+                    {!u.hasPaid && (
+                      <button 
+                        onClick={async () => {
+                          if (confirm(`Liberar acesso ao painel para ${u.email}?`)) {
+                            await setDoc(doc(db, "users", u.id), { hasPaid: true }, { merge: true });
+                          }
+                        }}
+                        className="text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        Liberar Acesso
+                      </button>
+                    )}
+                    {u.hasPaid && (
+                      <button 
+                        onClick={async () => {
+                          if (confirm(`Revogar acesso de ${u.email}?`)) {
+                            await setDoc(doc(db, "users", u.id), { hasPaid: false }, { merge: true });
+                          }
+                        }}
+                        className="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        Revogar
+                      </button>
+                    )}
                     <button 
                       onClick={async () => {
                         const newRole = u.role === 'admin' ? 'client' : 'admin';
