@@ -1183,12 +1183,12 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
 
   useEffect(() => {
     // Read plans directly from Firestore 'plans' collection (same source as admin dashboard)
-    const q = query(collection(db, "plans"), where("active", "==", true));
+    // Fetch the entire 'plans' collection for robustness, just like in AdminDashboard.
     
     const defaultPlansList = [
       {
         id: 'default-1',
-        name: "Plano Start",
+        name: "[EXEMPLO] Plano Start",
         price: 97,
         numericPrice: 97,
         features: ["Card Digital Personalizado", "Link na Bio Profissional", "Suporte via E-mail", "Atualizações Ilimitadas"],
@@ -1201,7 +1201,7 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
       },
       {
         id: 'default-2',
-        name: "Plano Profissional + NFC",
+        name: "[EXEMPLO] Plano Profissional + NFC",
         price: 297,
         numericPrice: 297,
         features: ["Tudo do Plano Start", "Cartão Físico NFC Incluso", "Envio Grátis para todo Brasil", "PDF Interativo de Bônus", "Suporte Prioritário WhatsApp"],
@@ -1214,7 +1214,7 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
       },
       {
         id: 'default-3',
-        name: "Plano Business",
+        name: "[EXEMPLO] Plano Business",
         price: 497,
         numericPrice: 497,
         features: ["Tudo do Plano Profissional", "Domínio Próprio (.com.br)", "Consultoria de SEO", "2 Cartões NFC Inclusos", "Gestão de Leads no Painel"],
@@ -1227,12 +1227,13 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
       }
     ];
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(collection(db, "plans"), (snapshot) => {
       if (!snapshot.empty) {
         const plansData = snapshot.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter((p: any) => p.active !== false)
           .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
-        setPlans(plansData);
+        setPlans(plansData.length > 0 ? plansData : defaultPlansList);
       } else {
         setPlans(defaultPlansList);
       }
