@@ -1146,17 +1146,72 @@ const DeliverySection = ({ user }: any) => {
               <h4 className="font-bold text-slate-900">Rastreio do Card Físico</h4>
             </div>
             <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${delivery?.status === 'shipped' ? 'bg-green-500 animate-pulse' : 'bg-slate-300'}`} />
-                <p className="text-sm font-bold text-slate-700">
-                  Status: {
+            <div className="space-y-6">
+              <div className="relative pt-4 pb-8">
+                {/* Progress Line */}
+                <div className="absolute top-8 left-0 w-full h-1 bg-slate-100 rounded-full" />
+                <div 
+                  className="absolute top-8 left-0 h-1 bg-vialinks-purple transition-all duration-500 rounded-full"
+                  style={{ 
+                    width: `${
+                      delivery?.status === 'pending' ? '0%' :
+                      delivery?.status === 'design' ? '25%' :
+                      delivery?.status === 'confirmation' ? '50%' :
+                      delivery?.status === 'production' ? '75%' :
+                      delivery?.status === 'shipped' || delivery?.status === 'delivered' ? '100%' : '0%'
+                    }` 
+                  }}
+                />
+
+                {/* Steps */}
+                <div className="relative flex justify-between">
+                  {[
+                    { id: 'pending', label: 'Briefing' },
+                    { id: 'design', label: 'Arte/Design' },
+                    { id: 'confirmation', label: 'Aprovação' },
+                    { id: 'production', label: 'Produção' },
+                    { id: 'shipped', label: 'Envio' }
+                  ].map((step, idx) => {
+                    const statuses = ['pending', 'design', 'confirmation', 'production', 'shipped', 'delivered'];
+                    const currentIdx = statuses.indexOf(delivery?.status || 'pending');
+                    const stepIdx = statuses.indexOf(step.id);
+                    const isCompleted = currentIdx > stepIdx || delivery?.status === 'delivered';
+                    const isActive = currentIdx === stepIdx;
+
+                    return (
+                      <div key={step.id} className="flex flex-col items-center gap-2">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all ${
+                          isCompleted ? 'bg-vialinks-purple border-vialinks-purple text-white' : 
+                          isActive ? 'bg-white border-vialinks-purple text-vialinks-purple shadow-lg shadow-vialinks-purple/20 scale-110' : 
+                          'bg-white border-slate-200 text-slate-300'
+                        }`}>
+                          {isCompleted ? <Check className="w-4 h-4" /> : <span className="text-[10px] font-bold">{idx + 1}</span>}
+                        </div>
+                        <span className={`text-[9px] font-black uppercase tracking-wider ${
+                          isCompleted || isActive ? 'text-slate-900' : 'text-slate-300'
+                        }`}>
+                          {step.label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="p-4 bg-vialinks-purple/5 rounded-2xl border border-vialinks-purple/10 flex items-center justify-center gap-2">
+                 <div className="w-2 h-2 rounded-full bg-vialinks-purple animate-pulse" />
+                 <p className="text-sm font-bold text-vialinks-purple">
+                  Status Atual: {
                     delivery?.status === 'pending' ? 'Aguardando Briefing' :
-                    delivery?.status === 'production' ? 'Em Produção' :
-                    delivery?.status === 'shipped' ? 'Enviado' :
-                    delivery?.status === 'delivered' ? 'Entregue' : 'Pendente'
+                    delivery?.status === 'design' ? 'Em Criação de Arte' :
+                    delivery?.status === 'confirmation' ? 'Aguardando Aprovação' :
+                    delivery?.status === 'production' ? 'Em Produção Física' :
+                    delivery?.status === 'shipped' ? 'Enviado / Em Trânsito' :
+                    delivery?.status === 'delivered' ? 'Entregue com Sucesso' : 'Processando pedido...'
                   }
                 </p>
               </div>
+            </div>
               {delivery?.trackingCode ? (
                 <div className="space-y-2">
                   <p className="text-xs text-slate-500">Código de Rastreio:</p>
@@ -2140,14 +2195,16 @@ const DeliveryManagement = () => {
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Status da Entrega</label>
                   <select 
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm font-bold"
                     value={editData.status}
                     onChange={e => setEditData({...editData, status: e.target.value})}
                   >
-                    <option value="pending">Pendente</option>
-                    <option value="production">Em Produção</option>
-                    <option value="shipped">Enviado</option>
-                    <option value="delivered">Entregue</option>
+                    <option value="pending">1. Briefing Pendente</option>
+                    <option value="design">2. Em Criação de Arte</option>
+                    <option value="confirmation">3. Aguardando Aprovação</option>
+                    <option value="production">4. Em Produção Física</option>
+                    <option value="shipped">5. Enviado / Trânsito</option>
+                    <option value="delivered">6. Entregue</option>
                   </select>
                 </div>
                 <div>
@@ -2195,7 +2252,16 @@ const DeliveryManagement = () => {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                   <p className="text-[9px] font-bold text-slate-400 uppercase">Status</p>
-                  <p className="text-xs font-bold text-slate-700">{d?.status || 'Pendente'}</p>
+                  <p className="text-xs font-bold text-slate-700">
+                    {
+                      d?.status === 'pending' ? '1. Briefing' :
+                      d?.status === 'design' ? '2. Arte' :
+                      d?.status === 'confirmation' ? '3. Aprovação' :
+                      d?.status === 'production' ? '4. Produção' :
+                      d?.status === 'shipped' ? '5. Enviado' :
+                      d?.status === 'delivered' ? '6. Entregue' : 'Não Iniciado'
+                    }
+                  </p>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                   <p className="text-[9px] font-bold text-slate-400 uppercase">Link Card</p>
