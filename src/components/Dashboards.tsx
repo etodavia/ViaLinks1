@@ -650,7 +650,7 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
       <div className="flex min-h-screen bg-white">
         {showOnboarding && <OnboardingTutorial user={user} onComplete={handleCompleteOnboarding} />}
         {/* Sidebar */}
-        <div className="w-64 relative overflow-hidden flex flex-col no-print">
+        <div className="w-80 relative overflow-hidden flex flex-col no-print">
           <div className="absolute inset-0 z-0">
             <FirebaseImage 
               storagePath="189861.jpg" 
