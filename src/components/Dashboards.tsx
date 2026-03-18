@@ -456,16 +456,29 @@ const PaymentGate = ({ user, onPaid, setView }: { user: any; onPaid: () => void;
       if (!snapshot.empty) {
         // Found a paid sale — link it to the user and unlock the dashboard
         const saleDoc = snapshot.docs[0];
-        await updateDoc(doc(db, "sales", saleDoc.id), { userId: user.uid });
-        await updateDoc(doc(db, "users", user.uid), { hasPaid: true, purchaseEmail: purchaseEmail.toLowerCase().trim() });
+        const saleData = saleDoc.data();
+        
+        await updateDoc(doc(db, "sales", saleDoc.id), { 
+          userId: user.uid,
+          updatedAt: new Date()
+        });
+        
+        await updateDoc(doc(db, "users", user.uid), { 
+          hasPaid: true, 
+          purchaseEmail: purchaseEmail.toLowerCase().trim(),
+          awaitingVerification: false,
+          userPlan: saleData.planName || "Plano Profissional"
+        });
+        
         onPaid();
       } else {
-        // Check if there's a pending sale (checkout filled but redirect to Stripe)
+        // Check if there's a pending sale (checkout filled but not yet confirmed paid)
         const qPending = query(
           collection(db, "sales"),
           where("email", "==", purchaseEmail.toLowerCase().trim())
         );
         const pendingSnap = await getDocs(qPending);
+        
         if (!pendingSnap.empty) {
           // Sale exists but not yet confirmed paid — send for manual review
           await updateDoc(doc(db, "users", user.uid), {
