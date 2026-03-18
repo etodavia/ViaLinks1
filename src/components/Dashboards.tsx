@@ -787,9 +787,12 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
                   </div>
                   <h3 className="text-xl font-bold text-slate-900 mb-2">Status do Card</h3>
                   <p className="text-slate-500 mb-6">Seu card físico está em produção. Prazo estimado: 5 dias úteis.</p>
-                  <div className="flex items-center gap-2 text-vialinks-purple font-bold">
+                  <button 
+                    onClick={() => setActiveTab('delivery')}
+                    className="flex items-center gap-2 text-vialinks-purple font-bold hover:underline transition-all"
+                  >
                     Ver Detalhes <ChevronRight className="w-4 h-4" />
-                  </div>
+                  </button>
                 </div>
                 <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100">
                   <div className="w-12 h-12 rounded-2xl bg-vialinks-orange/10 flex items-center justify-center mb-6">

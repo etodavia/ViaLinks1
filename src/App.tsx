@@ -652,8 +652,8 @@ const Hero = ({ content }: { content?: any }) => {
             </div>
           </div>
 
-          <div className="hero-mockup relative flex justify-center lg:justify-end lg:-mr-32 mt-4 lg:mt-8">
-            <div className="relative z-10 max-w-[800px] lg:max-w-none transform scale-110 sm:scale-125 lg:scale-150 origin-center lg:origin-right">
+          <div className="hero-mockup relative flex justify-center lg:justify-end lg:-mr-32 mt-12 lg:mt-8">
+            <div className="relative z-10 max-w-[800px] lg:max-w-none transform scale-[1.35] sm:scale-125 lg:scale-150 origin-center lg:origin-right">
               <FirebaseImage 
                 storagePath={content?.heroImageUrl || "11945874_Card_Phone2.png"} 
                 fallbackUrl="https://ais-dev-g52kgdoyt4kbetthjleoif-84265199171.us-east1.run.app/input_file_0.png"
