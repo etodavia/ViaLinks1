@@ -1183,7 +1183,7 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
 
   useEffect(() => {
     // Read plans directly from Firestore 'plans' collection (same source as admin dashboard)
-    const q = query(collection(db, "plans"), where("active", "==", true), orderBy("order", "asc"));
+    const q = query(collection(db, "plans"), where("active", "==", true));
     
     const defaultPlansList = [
       {
@@ -1229,7 +1229,9 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
-        const plansData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const plansData = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
         setPlans(plansData);
       } else {
         setPlans(defaultPlansList);
