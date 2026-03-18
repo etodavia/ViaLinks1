@@ -1318,7 +1318,8 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
                     name: plan.name, 
                     price: (plan.numericPrice || plan.price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), 
                     numericPrice: plan.numericPrice || (typeof plan.price === 'number' ? plan.price : parseFloat(String(plan.price).replace(/[^\d,]/g, '').replace(',', '.'))),
-                    quantity: 1 
+                    quantity: 1,
+                    paymentLink: plan.paymentLink
                   })}
                   className={`w-full py-4 rounded-xl font-bold transition-all active:scale-95 ${
                     plan.popular 
