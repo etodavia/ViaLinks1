@@ -1633,8 +1633,8 @@ export const AdminDashboard = ({ user, setView, onLogout, onOpenCart, cartCount 
           {activeTab === 'deliveries' && <DeliveryManagement />}
 
               {selectedBriefing && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/50 backdrop-blur-sm no-print">
-                  <div className="bg-white w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl p-8 relative">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/50 backdrop-blur-sm">
+                  <div className="bg-white w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl p-8 relative no-print-container">
                     <button 
                       onClick={() => setSelectedBriefing(null)}
                       className="absolute top-6 right-6 p-2 hover:bg-slate-100 rounded-full no-print"
@@ -1642,168 +1642,184 @@ export const AdminDashboard = ({ user, setView, onLogout, onOpenCart, cartCount 
                       <X className="w-6 h-6" />
                     </button>
 
-                    <div id="printable-briefing" className="bg-white" style={{fontFamily:"'Inter','Segoe UI',sans-serif",color:"#2d3748"}}>
-
-                      {/* PDF Header */}
-                      <div className="flex justify-between items-start mb-8 border-b-2 border-slate-900 pb-6">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-vialinks-orange rounded-xl flex items-center justify-center text-white font-black italic text-2xl vialinks-orange-bg">V</div>
+                    <div id="printable-briefing" className="bg-white p-4" style={{fontFamily:"'Inter', sans-serif", color:"#1a202c"}}>
+                      
+                      {/* Professional Print Header */}
+                      <div className="flex justify-between items-start mb-6 border-b-2 border-slate-900 pb-6">
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 bg-vialinks-purple rounded-xl flex items-center justify-center text-white font-black italic text-3xl">V</div>
                           <div>
-                            <h2 className="text-2xl font-black text-slate-900 tracking-tighter">VIALINKS</h2>
-                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ficha de Produção de Card Digital</p>
+                            <h2 className="text-2xl font-black text-slate-900 tracking-tighter leading-none">VIALINKS</h2>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Ficha Técnica de Produção</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase">Documento de Produção</p>
-                          <p className="text-sm font-black text-slate-900">ID: {selectedBriefing.id.slice(0, 12)}</p>
-                          <p className="text-[10px] text-slate-500">{new Date().toLocaleString()}</p>
+                          <div className="inline-block bg-slate-900 text-white px-3 py-1 rounded-md text-[10px] font-bold uppercase mb-2">Documento Interno</div>
+                          <p className="text-xs font-black text-slate-900">ID: {selectedBriefing.id.toUpperCase()}</p>
+                          <p className="text-[10px] text-slate-500 font-medium">Emitido em: {new Date().toLocaleString('pt-BR')}</p>
                         </div>
+                      </div>
+
+                      {/* Production Control Checklist - PRO REQUEST */}
+                      <div className="grid grid-cols-5 gap-4 mb-8">
+                        {[
+                          { label: 'Briefing Validado', color: 'bg-blue-50 border-blue-200' },
+                          { label: 'Design em Draft', color: 'bg-purple-50 border-purple-200' },
+                          { label: 'Aprovação Cliente', color: 'bg-amber-50 border-amber-200' },
+                          { label: 'Publicação Final', color: 'bg-emerald-50 border-emerald-200' },
+                          { label: 'Entrega Realizada', color: 'bg-slate-50 border-slate-200' }
+                        ].map((item, idx) => (
+                          <div key={idx} className={`border rounded-xl p-3 flex flex-col items-center justify-center text-center ${item.color} print-color-adjust`}>
+                            <div className="w-5 h-5 border-2 border-slate-400 rounded-md mb-2 bg-white"></div>
+                            <span className="text-[9px] font-black uppercase text-slate-700 leading-tight">{item.label}</span>
+                          </div>
+                        ))}
                       </div>
 
                       <div className="grid grid-cols-12 gap-8">
                         {/* Main Info Column */}
-                        <div className="col-span-8 space-y-8">
-                          {/* Section: Cliente */}
+                        <div className="col-span-8 space-y-6">
+                          
+                          {/* 01. Identidade */}
                           <section className="print-break-inside-avoid">
-                            <h3 className="text-xs font-black text-vialinks-purple uppercase tracking-widest mb-4 border-l-4 border-vialinks-purple pl-3">01. Dados do Cliente</h3>
-                            <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100 production-control-bg">
+                            <h3 className="text-[11px] font-black text-vialinks-purple uppercase tracking-wider mb-3 border-l-4 border-vialinks-purple pl-3">01. Dados de Identidade</h3>
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-4 bg-slate-50/50 p-5 rounded-2xl border border-slate-200 print-bg-slate">
                               <div>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase">Nome Completo</p>
-                                <p className="text-sm font-bold text-slate-800">{selectedBriefing.data?.name || "N/A"}</p>
+                                <label className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Nome Completo</label>
+                                <p className="text-sm font-bold text-slate-800">{selectedBriefing.data?.name || "---"}</p>
                               </div>
                               <div>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase">Cargo / Profissão</p>
-                                <p className="text-sm font-bold text-slate-800">{selectedBriefing.data?.job || "N/A"}</p>
+                                <label className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Cargo / Profissão</label>
+                                <p className="text-sm font-bold text-slate-800">{selectedBriefing.data?.job || "---"}</p>
                               </div>
                               <div>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase">WhatsApp</p>
-                                <p className="text-sm font-bold text-slate-800">{selectedBriefing.data?.phone || "N/A"}</p>
+                                <label className="text-[8px] font-bold text-slate-400 uppercase block mb-1">WhatsApp de Contato</label>
+                                <p className="text-sm font-bold text-slate-800">{selectedBriefing.data?.phone || "---"}</p>
                               </div>
                               <div>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase">E-mail</p>
-                                <p className="text-sm font-bold text-slate-800">{selectedBriefing.data?.email || "N/A"}</p>
+                                <label className="text-[8px] font-bold text-slate-400 uppercase block mb-1">E-mail Principal</label>
+                                <p className="text-sm font-bold text-slate-800">{selectedBriefing.data?.email || "---"}</p>
                               </div>
                               <div className="col-span-2">
-                                <p className="text-[9px] font-bold text-slate-400 uppercase">Slogan / Frase</p>
-                                <p className="text-sm font-bold text-slate-800 italic">"{selectedBriefing.data?.slogan || "Sem slogan"}"</p>
+                                <label className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Slogan ou Frase de Impacto</label>
+                                <p className="text-sm font-bold text-slate-800 italic leading-snug">"{selectedBriefing.data?.slogan || "Sem frase definida"}"</p>
                               </div>
                             </div>
                           </section>
 
-                          {/* Section: Links */}
+                          {/* 02. Estrutura de Links */}
                           <section className="print-break-inside-avoid">
-                            <h3 className="text-xs font-black text-vialinks-purple uppercase tracking-widest mb-4 border-l-4 border-vialinks-purple pl-3">02. Links e Redes Sociais</h3>
-                            <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100 production-control-bg">
+                            <h3 className="text-[11px] font-black text-vialinks-purple uppercase tracking-wider mb-3 border-l-4 border-vialinks-purple pl-3">02. Ecossistema Digital</h3>
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-4 bg-slate-50/50 p-5 rounded-2xl border border-slate-200 print-bg-slate">
                               <div>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase">Website</p>
-                                <p className="text-xs text-slate-700 truncate">{selectedBriefing.data?.website || "N/A"}</p>
+                                <label className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Website Oficial</label>
+                                <p className="text-xs text-slate-700 font-medium truncate">{selectedBriefing.data?.website || "---"}</p>
                               </div>
                               <div>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase">Instagram</p>
-                                <p className="text-xs text-slate-700">{selectedBriefing.data?.instagram || "N/A"}</p>
-                              </div>
-                              <div>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase">LinkedIn</p>
-                                <p className="text-xs text-slate-700">{selectedBriefing.data?.linkedin || "N/A"}</p>
+                                <label className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Instagram (@)</label>
+                                <p className="text-xs text-slate-700 font-medium">{selectedBriefing.data?.instagram || "---"}</p>
                               </div>
                               <div className="col-span-2">
-                                <p className="text-[9px] font-bold text-slate-400 uppercase">Outros Links / Observações de Links</p>
-                                <p className="text-xs text-slate-700 whitespace-pre-wrap">{selectedBriefing.data?.otherLinks || "Nenhum link adicional"}</p>
+                                <label className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Outros Links e Observações</label>
+                                <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">{selectedBriefing.data?.otherLinks || "Nenhuma observação adicional de links."}</p>
                               </div>
                             </div>
                           </section>
 
-                          {/* Section: Design */}
+                          {/* 03. Design */}
                           <section className="print-break-inside-avoid">
-                            <h3 className="text-xs font-black text-vialinks-purple uppercase tracking-widest mb-4 border-l-4 border-vialinks-purple pl-3">03. Design e Identidade</h3>
-                            <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-100 production-control-bg">
+                            <h3 className="text-[11px] font-black text-vialinks-purple uppercase tracking-wider mb-3 border-l-4 border-vialinks-purple pl-3">03. Estética e Identidade Visual</h3>
+                            <div className="space-y-4 bg-slate-50/50 p-5 rounded-2xl border border-slate-200 print-bg-slate">
                               <div>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase">Cores Preferidas</p>
-                                <p className="text-sm font-bold text-slate-800">{selectedBriefing.data?.colors || "Não especificado"}</p>
+                                <label className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Paleta de Cores e Preferências</label>
+                                <p className="text-sm font-bold text-slate-800">{selectedBriefing.data?.colors || "Cores padrão da marca / Não especificado"}</p>
                               </div>
                               <div>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase">Observações de Design</p>
-                                <p className="text-xs text-slate-700 whitespace-pre-wrap">{selectedBriefing.data?.notes || "Nenhuma observação"}</p>
+                                <label className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Direcionamento de Design / Notas</label>
+                                <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">{selectedBriefing.data?.notes || "O designer seguirá o padrão Premium ViaLinks."}</p>
                               </div>
                             </div>
                           </section>
+
                         </div>
 
-                        {/* Sidebar Column: Images & Control */}
-                        <div className="col-span-4 space-y-8">
-                          {/* Section: Fotos */}
+                        {/* Sidebar Column */}
+                        <div className="col-span-4 space-y-6">
+                          
+                          {/* 04. Assets */}
                           <section className="print-break-inside-avoid">
-                            <h3 className="text-xs font-black text-vialinks-purple uppercase tracking-widest mb-4 border-l-4 border-vialinks-purple pl-3">04. Ativos Visuais</h3>
+                            <h3 className="text-[11px] font-black text-vialinks-purple uppercase tracking-wider mb-3 border-l-4 border-vialinks-purple pl-3">04. Ativos Visuais</h3>
                             <div className="space-y-4">
-                              <div className="border border-slate-200 rounded-xl p-2 bg-white">
-                                <p className="text-[8px] font-bold text-slate-400 uppercase mb-1 text-center">Logo / Marca</p>
+                              <div className="border border-slate-200 rounded-2xl p-3 bg-white text-center shadow-sm">
+                                <span className="text-[7px] font-black text-slate-300 uppercase block mb-2 tracking-widest italic">LOGO / MARCA</span>
                                 {selectedBriefing.data?.logoUrl ? (
-                                  <img src={selectedBriefing.data.logoUrl} alt="Logo" className="w-full h-24 object-contain" referrerPolicy="no-referrer" loading="lazy" />
+                                  <img src={selectedBriefing.data.logoUrl} alt="Logo" className="max-h-24 mx-auto object-contain" referrerPolicy="no-referrer" />
                                 ) : (
-                                  <div className="h-24 bg-slate-50 flex items-center justify-center text-[10px] text-slate-300">Sem Logo</div>
+                                  <div className="h-20 bg-slate-50 rounded-lg flex items-center justify-center text-[9px] text-slate-300 font-bold border-2 border-dashed border-slate-100">LOGO AUSENTE</div>
                                 )}
                               </div>
-                              <div className="border border-slate-200 rounded-xl p-2 bg-white">
-                                <p className="text-[8px] font-bold text-slate-400 uppercase mb-1 text-center">Foto Pessoal</p>
+                              <div className="border border-slate-200 rounded-2xl p-2 bg-white text-center shadow-sm">
+                                <span className="text-[7px] font-black text-slate-300 uppercase block mb-2 tracking-widest italic">FOTO DE PERFIL</span>
                                 {selectedBriefing.data?.personalPhotoUrl ? (
-                                  <img src={selectedBriefing.data.personalPhotoUrl} alt="Foto Pessoal" className="w-full h-32 object-cover rounded-lg" referrerPolicy="no-referrer" loading="lazy" />
+                                  <img src={selectedBriefing.data.personalPhotoUrl} alt="Perfil" className="w-full h-40 object-cover rounded-xl" referrerPolicy="no-referrer" />
                                 ) : (
-                                  <div className="h-32 bg-slate-50 flex items-center justify-center text-[10px] text-slate-300">Sem Foto</div>
+                                  <div className="h-32 bg-slate-50 rounded-lg flex items-center justify-center text-[9px] text-slate-300 font-bold border-2 border-dashed border-slate-100">FOTO INDISPONÍVEL</div>
                                 )}
                               </div>
                             </div>
                           </section>
 
-                          {/* Section: Controle de Produção */}
-                          <section className="print-break-inside-avoid">
-                            <div className="bg-vialinks-purple text-white p-5 rounded-2xl shadow-xl space-y-4">
-                              <h3 className="text-[10px] font-black uppercase tracking-widest border-b border-white/20 pb-2">Controle de Produção</h3>
-                              <div className="space-y-3">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-[9px] opacity-60 uppercase">Status</span>
-                                  <span className="text-[10px] font-bold px-2 py-0.5 bg-white/20 rounded-full">{selectedBriefing.status === 'approved' ? 'APROVADO' : 'PENDENTE'}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                  <span className="text-[9px] opacity-60 uppercase">Data Receb.</span>
-                                  <span className="text-[10px] font-bold">{selectedBriefing.updatedAt?.toDate ? selectedBriefing.updatedAt.toDate().toLocaleDateString() : "N/A"}</span>
-                                </div>
-                                <div className="pt-4 border-t border-white/10">
-                                  <p className="text-[8px] opacity-40 uppercase mb-8">Assinatura Responsável</p>
-                                  <div className="h-px bg-white/30 w-full" />
-                                </div>
+                          {/* Approval Footer Box */}
+                          <div className="bg-slate-900 rounded-2xl p-5 text-white shadow-xl print-bg-black">
+                            <h4 className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-4 border-b border-slate-700 pb-2">Status do Processo</h4>
+                            <div className="space-y-4">
+                              <div className="flex justify-between items-center text-[10px] font-bold">
+                                <span className="text-slate-400 font-medium">STATUS ATUAL:</span>
+                                <span className={selectedBriefing.status === 'approved' ? 'text-emerald-400' : 'text-amber-400'}>
+                                  {selectedBriefing.status === 'approved' ? '✓ APROVADO' : '● PENDENTE'}
+                                </span>
+                              </div>
+                              <div className="pt-6 border-t border-slate-700 mt-6">
+                                <div className="h-px bg-slate-700 w-full mb-1"></div>
+                                <span className="text-[7px] text-slate-500 uppercase font-black">RUBRICA DO RESPONSÁVEL</span>
                               </div>
                             </div>
-                          </section>
+                          </div>
+
                         </div>
                       </div>
 
-                      {/* Product Photos Section */}
-                      {selectedBriefing.data?.productPhotos?.some((p: string) => p) && (
-                        <section className="mt-8 print-break-inside-avoid">
-                          <h3 className="text-xs font-black text-vialinks-purple uppercase tracking-widest mb-4 border-l-4 border-vialinks-purple pl-3">05. Fotos de Produtos / Portfólio</h3>
+                      {/* Product Photos - Extra Page if needed */}
+                      {selectedBriefing.data?.productPhotos?.some((url: string) => url) && (
+                        <section className="mt-10 print-break-before-always print-break-inside-avoid">
+                          <h3 className="text-[11px] font-black text-vialinks-purple uppercase tracking-wider mb-5 border-l-4 border-vialinks-purple pl-3 tracking-widest">05. Galeria de Produtos e Ativos Adicionais</h3>
                           <div className="grid grid-cols-3 gap-4">
                             {selectedBriefing.data.productPhotos.map((url: string, i: number) => url && (
-                              <div key={i} className="border border-slate-200 rounded-xl p-2 bg-white">
-                                <img src={url} alt={`Produto ${i+1}`} className="w-full h-40 object-cover rounded-lg" referrerPolicy="no-referrer" loading="lazy" />
+                              <div key={i} className="border border-slate-200 rounded-2xl p-2 bg-white shadow-sm overflow-hidden">
+                                <img src={url} alt={`Produto ${i+1}`} className="w-full h-44 object-cover rounded-lg" referrerPolicy="no-referrer" />
                               </div>
                             ))}
                           </div>
                         </section>
                       )}
 
-                      {/* Footer */}
-                      <div className="mt-12 pt-6 border-t border-slate-100 flex justify-between items-center text-[9px] text-slate-400">
-                        <p>© 2026 ViaLinks Tecnologia - agenciaetodavia.com.br</p>
-                        <p>Página 1 de 1</p>
+                      {/* Branding Footer */}
+                      <div className="mt-12 pt-6 border-t border-slate-100 flex justify-between items-center no-print-bg">
+                        <div className="flex items-center gap-2">
+                          <Zap className="w-3 h-3 text-vialinks-orange" />
+                          <span className="text-[8px] font-black text-slate-400">VIA LINKS CARD DIGITAL • {new Date().getFullYear()}</span>
+                        </div>
+                        <p className="text-[8px] text-slate-300 font-bold uppercase tracking-widest">Página 1 de 1</p>
                       </div>
                     </div>
 
+                    {/* Modal Controls - HIDE IN PRINT */}
                     <div className="flex gap-4 mt-8 pt-6 border-t border-slate-100 no-print">
                       <button 
                         onClick={() => window.print()}
-                        className="flex-1 flex items-center justify-center gap-2 bg-slate-100 text-slate-700 py-4 rounded-xl font-bold hover:bg-slate-200 transition-all"
+                        className="flex-1 flex items-center justify-center gap-2 bg-slate-100 text-slate-700 py-4 rounded-xl font-bold hover:bg-slate-200 transition-all border border-slate-200 shadow-sm"
                       >
-                        <Printer className="w-5 h-5" /> Imprimir Ficha de Produção
+                        <Printer className="w-5 h-5" /> Imprimir Documento Profissional
                       </button>
                       {selectedBriefing.status !== 'approved' && (
                         <button 
@@ -1818,7 +1834,7 @@ export const AdminDashboard = ({ user, setView, onLogout, onOpenCart, cartCount 
                           }}
                           className="flex-1 flex items-center justify-center gap-2 bg-vialinks-purple text-white py-4 rounded-xl font-bold shadow-lg shadow-vialinks-purple/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
                         >
-                          <Check className="w-5 h-5" /> Aprovar para Produção
+                          <Check className="w-5 h-5" /> Liberar para Produção
                         </button>
                       )}
                     </div>

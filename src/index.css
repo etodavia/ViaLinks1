@@ -54,7 +54,7 @@
     visibility: hidden;
   }
   #printable-briefing, #printable-briefing * {
-    visibility: visible;
+    visibility: visible !important;
   }
   #printable-briefing {
     position: absolute;
@@ -62,25 +62,45 @@
     top: 0;
     width: 100%;
     background: white !important;
-    color: black !important;
+    color: #1a202c !important;
     padding: 0 !important;
     margin: 0 !important;
   }
   .no-print {
     display: none !important;
   }
+  /* Ensure parent containers don't hide the printable area */
+  .no-print-container {
+    visibility: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
   .print-break-inside-avoid {
     break-inside: avoid;
   }
-  .production-control-bg {
+  .print-break-before-always {
+    break-before: always;
+  }
+  .print-color-adjust {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .print-bg-slate {
     background-color: #f8fafc !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  .vialinks-orange-bg {
-    background-color: #ff6b00 !important;
+  .print-bg-black {
+    background-color: #1a202c !important;
+    color: white !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+  /* Remove Ver plan link from print if it leaks */
+  button[onClick*="setView('landing')"] {
+    display: none !important;
   }
 }
 
