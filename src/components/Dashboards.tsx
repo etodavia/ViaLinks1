@@ -1330,6 +1330,7 @@ const ResellerClientManagement = ({ reseller }: { reseller: any }) => {
         role: 'client',
         hasPaid: true,
         resellerId: reseller.uid,
+        resellerName: reseller.displayName || reseller.email,
         createdAt: serverTimestamp()
       });
       setIsAdding(false);
@@ -2143,6 +2144,11 @@ export const AdminDashboard = ({ user, setView, onLogout, onOpenCart, cartCount 
                         </span>
                         {u.purchaseEmail && u.purchaseEmail !== u.email && (
                           <span className="text-[10px] text-slate-400">Email compra: {u.purchaseEmail}</span>
+                        )}
+                        {u.resellerName && (
+                          <span className="text-[10px] bg-vialinks-purple/10 text-vialinks-purple font-bold px-2 py-0.5 rounded-full border border-vialinks-purple/20">
+                            Revendedor: {u.resellerName}
+                          </span>
                         )}
                       </div>
                     </div>
