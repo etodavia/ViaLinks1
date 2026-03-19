@@ -677,6 +677,14 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
         >
           <ShoppingBag className="w-5 h-5" /> {(!hasActiveOrders && user.role !== 'admin') ? 'Planos e Preços' : 'Meus Pedidos'}
         </button>
+        {user.role === 'reseller' && (
+          <button 
+            onClick={() => { setActiveTab('resale-plans'); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'resale-plans' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+          >
+            <Zap className="w-5 h-5 text-vialinks-orange" /> Planos para Revenda
+          </button>
+        )}
         <button 
           onClick={() => { (hasActiveOrders || user.role === 'admin') && setActiveTab('delivery'); setIsMobileMenuOpen(false); }}
           disabled={!hasActiveOrders && user.role !== 'admin'}
@@ -805,9 +813,12 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
                 {activeTab === 'testimonial' && "Deixe seu Depoimento"}
                 {activeTab === 'config' && "Configurações da Conta"}
                 {activeTab === 'store' && "Loja ViaLinks"}
+                {activeTab === 'resale-plans' && "Planos para Revenda"}
               </h1>
               <p className="text-slate-500">
-                {activeTab === 'store' ? "Adquira novos produtos e acessórios para seu card digital." : activeTab === 'config' ? "Gerencie seus dados pessoais e segurança." : "Gerencie sua conta e seus cards ViaLinks."}
+                {activeTab === 'store' ? "Adquira novos produtos e acessórios para seu card digital." : 
+                 activeTab === 'resale-plans' ? "Acesse preços exclusivos de revendedor para escalar seu negócio." :
+                 activeTab === 'config' ? "Gerencie seus dados pessoais e segurança." : "Gerencie sua conta e seus cards ViaLinks."}
               </p>
             </div>
             <div className="flex items-center gap-4">
@@ -1255,6 +1266,80 @@ export const StoreTab = ({ user, setView, onAddToCart }: any) => {
           </div>
         ))}
       </div>
+    </div>
+  );
+};
+
+const ResalePlans = ({ onAddToCart }: { onAddToCart: (item: any) => void }) => {
+  const [plans, setPlans] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const q = query(collection(db, "plans"), where("active", "==", true), orderBy("order", "asc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const plansData = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter((p: any) => p.resellerPrice > 0);
+      setPlans(plansData);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) return <div className="p-12 text-center text-slate-500">Carregando planos para revenda...</div>;
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      {plans.length === 0 ? (
+        <div className="col-span-2 p-12 text-center bg-slate-50 border border-dashed border-slate-200 rounded-3xl">
+          <Zap className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+          <p className="text-slate-500">Nenhum plano de revenda configurado no momento.</p>
+        </div>
+      ) : (
+        plans.map((plan) => (
+          <div key={plan.id} className="p-8 rounded-[32px] bg-white border border-slate-100 shadow-sm hover:shadow-xl transition-all flex flex-col relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-vialinks-purple/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
+            
+            <div className="mb-8">
+              <h3 className="text-2xl font-black text-slate-900 mb-2">{plan.name}</h3>
+              <div className="flex flex-col">
+                <span className="text-sm text-slate-400 line-through">De {plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl font-black text-vialinks-purple">
+                    {plan.resellerPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </span>
+                  <span className="text-slate-400 text-sm font-bold">/unid</span>
+                </div>
+              </div>
+            </div>
+
+            <ul className="space-y-4 mb-10 flex-grow">
+              {plan.features?.slice(0, 5).map((f: string, i: number) => (
+                <li key={i} className="flex items-center gap-3 text-slate-600 text-sm">
+                  <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                    <Check className="w-3 h-3 text-emerald-600" />
+                  </div>
+                  {f}
+                </li>
+              ))}
+            </ul>
+
+            <button 
+              onClick={() => onAddToCart({
+                id: plan.id,
+                name: plan.name,
+                price: plan.resellerPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+                numericPrice: plan.resellerPrice,
+                quantity: 1,
+                paymentLink: plan.resellerLink || plan.paymentLink
+              })}
+              className="w-full bg-vialinks-purple text-white py-4 rounded-2xl font-black shadow-lg shadow-vialinks-purple/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            >
+              Comprar para Revender <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
+        ))
+      )}
     </div>
   );
 };
