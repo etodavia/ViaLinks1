@@ -1236,13 +1236,29 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
                 )}
                 <div className="mb-8">
                   <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-extrabold">
-                      {typeof plan.price === 'number' 
-                        ? plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-                        : plan.price}
-                    </span>
-                    <span className={plan.popular ? 'text-purple-200' : 'text-slate-400'}>/único</span>
+                  <div className="flex flex-col gap-1">
+                    {user?.role === 'reseller' && plan.resellerPrice > 0 && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-slate-400 line-through">
+                          {typeof plan.price === 'number' 
+                            ? plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                            : plan.price}
+                        </span>
+                        <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                          Oferta Revendedor
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-4xl font-extrabold">
+                        {user?.role === 'reseller' && plan.resellerPrice > 0
+                          ? plan.resellerPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                          : (typeof plan.price === 'number' 
+                              ? plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                              : plan.price)}
+                      </span>
+                      <span className={plan.popular ? 'text-purple-200' : 'text-slate-400'}>/único</span>
+                    </div>
                   </div>
                 </div>
                 <ul className="space-y-4 mb-10 flex-grow">
@@ -1270,14 +1286,20 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
                   ))}
                 </ul>
                 <button 
-                  onClick={() => onAddToCart({ 
-                    id: plan.id, 
-                    name: plan.name, 
-                    price: (plan.numericPrice || plan.price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), 
-                    numericPrice: plan.numericPrice || (typeof plan.price === 'number' ? plan.price : parseFloat(String(plan.price).replace(/[^\d,]/g, '').replace(',', '.'))),
-                    quantity: 1,
-                    paymentLink: plan.paymentLink
-                  })}
+                  onClick={() => {
+                    const isReseller = user?.role === 'reseller';
+                    const finalPrice = (isReseller && plan.resellerPrice > 0) ? plan.resellerPrice : (plan.numericPrice || (typeof plan.price === 'number' ? plan.price : parseFloat(String(plan.price).replace(/[^\d,]/g, '').replace(',', '.'))));
+                    const finalLink = (isReseller && plan.resellerLink) ? plan.resellerLink : plan.paymentLink;
+                    
+                    onAddToCart({ 
+                      id: plan.id, 
+                      name: plan.name, 
+                      price: finalPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), 
+                      numericPrice: finalPrice,
+                      quantity: 1,
+                      paymentLink: finalLink
+                    });
+                  }}
                   className={`w-full py-4 rounded-xl font-bold transition-all active:scale-95 ${
                     plan.popular 
                       ? 'bg-vialinks-orange text-white hover:shadow-lg hover:shadow-vialinks-orange/40' 
@@ -1557,7 +1579,40 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
       
       await setDoc(saleRef, saleData);
 
-      // 2. Determine Redirection URL
+      // 2. Attempt to create Checkout Session via backend API
+      try {
+        const response = await fetch('/api/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: cart.map(item => ({
+              id: item.id,
+              name: item.name,
+              quantity: item.quantity,
+              numericPrice: item.numericPrice || item.price
+            })),
+            email: formData.email,
+            name: formData.name,
+            phone: formData.phone,
+            taxId: formData.taxId
+          })
+        });
+
+        if (response.ok) {
+          const { url } = await response.json();
+          if (url) {
+            window.location.href = url;
+            return;
+          }
+        } else {
+          const errData = await response.json();
+          console.warn("[Backend Checkout Error]:", errData);
+        }
+      } catch (err: any) {
+        console.warn("[API Checkout Connection Failed]:", err.message);
+      }
+
+      // 3. Fallback: Determine Redirection URL from direct links
       // We look for a paymentLink in the first item of the cart (usually it's one main product)
       const mainProduct = cart[0];
       const redirectUrl = mainProduct?.paymentLink || mainProduct?.numericPrice_link; 
@@ -1570,8 +1625,8 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
           
         window.location.href = finalUrl;
       } else {
-        // Fallback: If no link is found, go back to landing
-        window.location.href = '/'; 
+        // Final Fallback: If no link is found, return to landing
+        setIntentError("Link de pagamento indisponível. Entre em contato com o suporte.");
       }
     } catch (err: any) {
       console.error("Checkout Capture Error:", err);

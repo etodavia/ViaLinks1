@@ -44,19 +44,32 @@ export default async function handler(req: any, res: any) {
     const db = initFirebase();
     const stripe = await getStripe(db);
     const { items, email, name, phone, taxId } = req.body;
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: "Carrinho está vazio." });
+    }
 
-    console.log("[Function] Creating session for:", email);
+    const parsePrice = (price: any): number => {
+      if (typeof price === 'number') return price;
+      if (!price) return 0;
+      const cleaned = String(price).replace(/[^\d.,]/g, '').replace(',', '.');
+      const parsed = parseFloat(cleaned);
+      return isNaN(parsed) ? 0 : parsed;
+    };
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      line_items: items.map((item: any) => ({
-        price_data: {
-          currency: 'brl',
-          product_data: { name: item.name },
-          unit_amount: Math.round(item.numericPrice * 100)
-        },
-        quantity: item.quantity
-      })),
+      line_items: items.map((item: any) => {
+        const unitAmount = Math.round(parsePrice(item.numericPrice || item.price) * 100);
+        if (unitAmount <= 0) throw new Error(`Preço inválido para o item: ${item.name}`);
+        return {
+          price_data: {
+            currency: 'brl',
+            product_data: { name: item.name },
+            unit_amount: unitAmount
+          },
+          quantity: item.quantity || 1
+        };
+      }),
       mode: 'payment',
       customer_email: email,
       success_url: `${process.env.APP_URL}/?success=true&session_id={CHECKOUT_SESSION_ID}`,

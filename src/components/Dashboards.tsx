@@ -715,7 +715,9 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
           </div>
           <div className="overflow-hidden text-left">
             <p className="text-sm font-bold text-white truncate">{user.email}</p>
-            <p className="text-xs text-white/40">{user.role === 'admin' ? 'Administrador' : 'Cliente'}</p>
+            <p className="text-xs text-white/40">
+              {user.role === 'admin' ? 'Administrador' : user.role === 'reseller' ? 'Revendedor' : 'Cliente'}
+            </p>
           </div>
         </div>
         <button 
@@ -1856,8 +1858,12 @@ export const AdminDashboard = ({ user, setView, onLogout, onOpenCart, cartCount 
                       <p className="font-bold text-slate-900">{u.email}</p>
                       <p className="text-sm text-slate-500">Papel: {u.role}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${u.hasPaid ? 'bg-green-100 text-green-700' : u.awaitingVerification ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
-                          {u.hasPaid ? '✓ Acesso Liberado' : u.awaitingVerification ? '⏳ Aguardando Verificação' : 'Sem Acesso'}
+                        <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                          u.role === 'reseller' ? 'bg-vialinks-purple text-white' :
+                          u.hasPaid ? 'bg-green-100 text-green-700' : 
+                          u.awaitingVerification ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'
+                        }`}>
+                          {u.role === 'reseller' ? '★ Revendedor' : u.hasPaid ? '✓ Acesso Liberado' : u.awaitingVerification ? '⏳ Aguardando Verificação' : 'Sem Acesso'}
                         </span>
                         {u.purchaseEmail && u.purchaseEmail !== u.email && (
                           <span className="text-[10px] text-slate-400">Email compra: {u.purchaseEmail}</span>
@@ -1895,14 +1901,18 @@ export const AdminDashboard = ({ user, setView, onLogout, onOpenCart, cartCount 
                     )}
                     <button 
                       onClick={async () => {
-                        const newRole = u.role === 'admin' ? 'client' : 'admin';
+                        let newRole = 'client';
+                        if (u.role === 'client') newRole = 'reseller';
+                        else if (u.role === 'reseller') newRole = 'admin';
+                        else newRole = 'client';
+                        
                         if (confirm(`Deseja alterar o papel de ${u.email} para ${newRole}?`)) {
                           await setDoc(doc(db, "users", u.id), { role: newRole }, { merge: true });
                         }
                       }}
                       className="text-xs font-bold text-vialinks-purple hover:underline"
                     >
-                      Alterar Permissão
+                      Alterar Permissão ({u.role})
                     </button>
                     <button 
                       onClick={async () => {
@@ -2812,7 +2822,7 @@ const PlanManagement = () => {
         });
       }
       setIsAdding(false);
-      setNewPlan({ name: "", price: 0, features: "", excludedFeatures: "", active: true, order: 0, popular: false, cta: "", paymentLink: "" });
+      setNewPlan({ name: "", price: 0, resellerPrice: 0, features: "", excludedFeatures: "", active: true, order: 0, popular: false, cta: "", paymentLink: "", resellerLink: "" });
     } catch (error) {
       handleFirestoreError(error, editingPlanId ? OperationType.UPDATE : OperationType.CREATE, "plans");
     }
@@ -2876,7 +2886,9 @@ const PlanManagement = () => {
       order: p.order || 0,
       popular: p.popular || false,
       cta: p.cta || "",
-      paymentLink: p.paymentLink || ""
+      paymentLink: p.paymentLink || "",
+      resellerPrice: p.resellerPrice || 0,
+      resellerLink: p.resellerLink || ""
     });
     setEditingPlanId(p.id);
     setIsAdding(true);
@@ -2903,7 +2915,7 @@ const PlanManagement = () => {
               setIsAdding(!isAdding);
               if (isAdding) {
                 setEditingPlanId(null);
-                setNewPlan({ name: "", price: 0, features: "", excludedFeatures: "", active: true, order: 0, popular: false, cta: "", paymentLink: "" });
+                setNewPlan({ name: "", price: 0, resellerPrice: 0, features: "", excludedFeatures: "", active: true, order: 0, popular: false, cta: "", paymentLink: "", resellerLink: "" });
               }
             }}
             className="bg-vialinks-orange text-white px-6 py-2 rounded-xl font-bold"
@@ -2951,6 +2963,18 @@ const PlanManagement = () => {
                 onChange={e => setNewPlan({...newPlan, paymentLink: e.target.value})}
               />
             </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2 text-vialinks-purple">Link de Pagamento Revendedor (Direto)</label>
+              <input 
+                type="url" 
+                placeholder="https://buy.stripe.com/..."
+                className="w-full px-4 py-3 rounded-xl border border-vialinks-purple/20 outline-none focus:ring-2 focus:ring-vialinks-purple bg-vialinks-purple/5"
+                value={newPlan.resellerLink || ""}
+                onChange={e => setNewPlan({...newPlan, resellerLink: e.target.value})}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Ordem</label>
@@ -3004,7 +3028,10 @@ const PlanManagement = () => {
           <div key={p.id} className="p-6 rounded-2xl border border-slate-100 bg-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <p className="font-bold text-slate-900">{p.name}</p>
-              <p className="text-sm text-slate-500">R$ {p.price}</p>
+              <div className="flex gap-4">
+                <p className="text-sm text-slate-500">Público: R$ {p.price}</p>
+                {p.resellerPrice > 0 && <p className="text-sm text-vialinks-purple font-bold">Revendedor: R$ {p.resellerPrice}</p>}
+              </div>
               <p className="text-[10px] text-slate-400 mt-1">{p.features?.length || 0} vantagens listadas</p>
             </div>
             <div className="flex items-center gap-4">
