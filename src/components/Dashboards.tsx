@@ -692,6 +692,14 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
         >
           <Package className="w-5 h-5" /> Entrega e Card
         </button>
+        {user.role === 'reseller' && (
+          <button 
+            onClick={() => { setActiveTab('reseller-clients'); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'reseller-clients' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+          >
+            <Users className="w-5 h-5" /> Meus Clientes
+          </button>
+        )}
         {(hasActiveOrders || user.role === 'admin') && (
           <button 
             onClick={() => { setActiveTab('testimonial'); setIsMobileMenuOpen(false); }}
@@ -814,10 +822,12 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
                 {activeTab === 'config' && "Configurações da Conta"}
                 {activeTab === 'store' && "Loja ViaLinks"}
                 {activeTab === 'resale-plans' && "Planos para Revenda"}
+                {activeTab === 'reseller-clients' && "Meus Clientes"}
               </h1>
               <p className="text-slate-500">
                 {activeTab === 'store' ? "Adquira novos produtos e acessórios para seu card digital." : 
                  activeTab === 'resale-plans' ? "Acesse preços exclusivos de revendedor para escalar seu negócio." :
+                 activeTab === 'reseller-clients' ? "Gerencie seus clientes, acompanhe briefings e status de entrega." :
                  activeTab === 'config' ? "Gerencie seus dados pessoais e segurança." : "Gerencie sua conta e seus cards ViaLinks."}
               </p>
             </div>
@@ -1266,6 +1276,187 @@ export const StoreTab = ({ user, setView, onAddToCart }: any) => {
           </div>
         ))}
       </div>
+    </div>
+  );
+};
+
+const ResellerClientManagement = ({ reseller }: { reseller: any }) => {
+  const [clients, setClients] = useState<any[]>([]);
+  const [briefings, setBriefings] = useState<any[]>([]);
+  const [deliveries, setDeliveries] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isAdding, setIsAdding] = useState(false);
+  const [newClient, setNewClient] = useState({ name: "", email: "" });
+  const [selectedClient, setSelectedClient] = useState<any>(null);
+
+  useEffect(() => {
+    // 1. Fetch all clients linked to this reseller
+    const qUsers = query(collection(db, "users"), where("resellerId", "==", reseller.uid));
+    const unsubscribeUsers = onSnapshot(qUsers, (snap) => {
+      const usersData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setClients(usersData);
+      
+      // 2. Clear previous listeners if needed (simplified here for brevity)
+      // In a real app, you would fetch briefings/deliveries for THESE specific client IDs
+    });
+
+    // 3. To keep it reactive, listen to briefings and deliveries in general 
+    // but we will filter them in the UI for performance of the prototype.
+    const unsubscribeBriefings = onSnapshot(collection(db, "briefings"), (snap) => {
+      setBriefings(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    const unsubscribeDeliveries = onSnapshot(collection(db, "deliveries"), (snap) => {
+      setDeliveries(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    setLoading(false);
+    return () => {
+      unsubscribeUsers();
+      unsubscribeBriefings();
+      unsubscribeDeliveries();
+    };
+  }, [reseller.uid]);
+
+  const handleAddClient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      // We create a dummy user doc for the client if it doesn't exist
+      // Or we just update existing one
+      const clientUid = `client_${Date.now()}`;
+      await setDoc(doc(db, "users", clientUid), {
+        email: newClient.email,
+        displayName: newClient.name,
+        role: 'client',
+        hasPaid: true,
+        resellerId: reseller.uid,
+        createdAt: serverTimestamp()
+      });
+      setIsAdding(false);
+      setNewClient({ name: "", email: "" });
+      alert("Cliente cadastrado com sucesso!");
+    } catch (error) {
+      alert("Erro ao cadastrar cliente.");
+    }
+  };
+
+  if (loading) return <div className="p-12 text-center text-slate-500">Carregando seus clientes...</div>;
+
+  return (
+    <div className="space-y-8">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-vialinks-purple/10 rounded-xl flex items-center justify-center">
+            <Users className="w-6 h-6 text-vialinks-purple" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-slate-900">Gerenciamento de Clientes</h3>
+            <p className="text-xs text-slate-500">Total: {clients.length} clientes ativos</p>
+          </div>
+        </div>
+        <button 
+          onClick={() => setIsAdding(!isAdding)}
+          className="bg-vialinks-purple text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all"
+        >
+          {isAdding ? "Fechar" : <><Plus className="w-5 h-5" /> Novo Cliente</>}
+        </button>
+      </div>
+
+      {isAdding && (
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-8 bg-white rounded-3xl border border-slate-100 shadow-sm"
+        >
+          <h4 className="font-bold text-slate-900 mb-6">Cadastrar Cliente</h4>
+          <form onSubmit={handleAddClient} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Nome do Cliente</label>
+              <input 
+                type="text" required
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-vialinks-purple"
+                value={newClient.name}
+                onChange={e => setNewClient({...newClient, name: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">E-mail do Cliente</label>
+              <input 
+                type="email" required
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-vialinks-purple"
+                value={newClient.email}
+                onChange={e => setNewClient({...newClient, email: e.target.value})}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <button type="submit" className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold hover:bg-black transition-all">
+                Salvar Cliente
+              </button>
+            </div>
+          </form>
+        </motion.div>
+      )}
+
+      {clients.length === 0 ? (
+        <div className="p-16 text-center bg-slate-50 rounded-[40px] border border-dashed border-slate-200">
+          <Package className="w-16 h-16 text-slate-200 mx-auto mb-4" />
+          <p className="text-slate-400 font-medium">Você ainda não possui clientes cadastrados.</p>
+          <p className="text-xs text-slate-400 mt-2">Clique em "Novo Cliente" para começar a gerenciar seus projetos.</p>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {clients.map((client) => {
+            const briefing = briefings.find(b => b.userId === client.id);
+            const delivery = deliveries.find(d => d.userId === client.id);
+
+            return (
+              <div key={client.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6 group hover:border-vialinks-purple/30 transition-all">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-vialinks-purple font-black text-xl group-hover:bg-vialinks-purple/10 transition-colors">
+                    {client.displayName?.[0] || client.email?.[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-900 text-lg">{client.displayName || "Cliente sem nome"}</h4>
+                    <p className="text-sm text-slate-400">{client.email}</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase mb-1">Briefing</span>
+                    <span className={`text-xs font-bold px-3 py-1 rounded-full ${briefing ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                      {briefing ? (briefing.status === 'approved' ? '✓ Aprovado' : '● Enviado') : 'Pendente'}
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase mb-1">Entrega</span>
+                    <span className={`text-xs font-bold px-3 py-1 rounded-full ${delivery ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
+                      {delivery ? (
+                        delivery.status === 'delivered' ? '✓ Entregue' :
+                        delivery.status === 'shipped' ? '✈ Enviado' :
+                        delivery.status === 'production' ? '🔨 Produção' : 'Criação'
+                      ) : 'Não Iniciado'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                   <button 
+                    onClick={() => {
+                      if (confirm("Deseja remover este cliente da sua lista?")) {
+                        updateDoc(doc(db, "users", client.id), { resellerId: null });
+                      }
+                    }}
+                    className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
