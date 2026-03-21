@@ -57,6 +57,7 @@ export default async function handler(req: any, res: any) {
     };
 
     const baseUrl = process.env.APP_URL || (req.headers.host ? `https://${req.headers.host}` : "");
+    const targetClientId = items.find((i: any) => i.targetClientId)?.targetClientId || null;
     
     // Save record to sales collection as a lead (Backend uses admin privileges)
     if (db) {
@@ -73,7 +74,7 @@ export default async function handler(req: any, res: any) {
           };
         });
 
-        await db.collection("sales").add({
+        const saleRef = await db.collection("sales").add({
           email,
           name: name || "",
           phone: phone || "",
@@ -82,35 +83,48 @@ export default async function handler(req: any, res: any) {
           items: lineItems,
           status: "pending_payment",
           type: "lead_redirect_api",
+          targetClientId,
           createdAt: admin.firestore.FieldValue.serverTimestamp()
         });
+        
+        // Pass saleId to Stripe metadata
+        const saleId = saleRef.id;
+
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ['card'],
+          line_items: items.map((item: any) => {
+            const unitAmount = Math.round(parsePrice(item.numericPrice || item.price) * 100);
+            if (unitAmount <= 0) throw new Error(`Preço inválido para o item: ${item.name}`);
+            return {
+              price_data: {
+                currency: 'brl',
+                product_data: { name: item.name },
+                unit_amount: unitAmount
+              },
+              quantity: item.quantity || 1
+            };
+          }),
+          mode: 'payment',
+          customer_email: email,
+          success_url: `${baseUrl}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${baseUrl}/?view=checkout`,
+          metadata: { 
+            customerName: name || "", 
+            customerPhone: phone || "", 
+            taxId: taxId || "",
+            targetClientId: targetClientId || "",
+            saleId: saleId || ""
+          }
+        });
+
+        return res.status(200).json({ url: session.url });
       } catch (saveErr) {
-        console.warn("[Admin] Failed to save pre-checkout lead:", saveErr);
+        console.warn("[Admin] Failed to save/create session:", saveErr);
+        throw saveErr;
       }
     }
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: items.map((item: any) => {
-        const unitAmount = Math.round(parsePrice(item.numericPrice || item.price) * 100);
-        if (unitAmount <= 0) throw new Error(`Preço inválido para o item: ${item.name}`);
-        return {
-          price_data: {
-            currency: 'brl',
-            product_data: { name: item.name },
-            unit_amount: unitAmount
-          },
-          quantity: item.quantity || 1
-        };
-      }),
-      mode: 'payment',
-      customer_email: email,
-      success_url: `${baseUrl}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/?view=checkout`,
-      metadata: { customerName: name || "", customerPhone: phone || "", taxId: taxId || "" }
-    });
-
-    return res.status(200).json({ url: session.url });
+    return res.status(500).json({ error: "Database not available" });
   } catch (err: any) {
     console.error("[Function] Checkout Error:", err.message);
     return res.status(500).json({ error: "Checkout Failed", message: err.message });

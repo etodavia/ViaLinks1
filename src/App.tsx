@@ -1548,7 +1548,8 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
               id: item.id,
               name: item.name,
               quantity: item.quantity,
-              numericPrice: item.numericPrice || item.price
+              numericPrice: item.numericPrice || item.price,
+              targetClientId: item.targetClientId
             })),
             email: formData.email,
             name: formData.name,

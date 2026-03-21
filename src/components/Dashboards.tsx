@@ -894,7 +894,7 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
             {activeTab === 'testimonial' && (hasActiveOrders || user.role === 'admin') && <TestimonialForm user={user} />}
             {activeTab === 'config' && <AccountSettings user={user} setView={setView} />}
             {activeTab === 'store' && <StoreTab user={user} setView={setView} onAddToCart={onAddToCart} />}
-            {activeTab === 'resale-plans' && <ResalePlans onAddToCart={onAddToCart} />}
+            {activeTab === 'resale-plans' && <ResalePlans onAddToCart={onAddToCart} reseller={user} />}
             {activeTab === 'reseller-clients' && <ResellerClientManagement reseller={user} />}
           </div>
         </div>
@@ -1465,25 +1465,35 @@ const ResellerClientManagement = ({ reseller }: { reseller: any }) => {
   );
 };
 
-const ResalePlans = ({ onAddToCart }: { onAddToCart: (item: any) => void }) => {
+const ResalePlans = ({ onAddToCart, reseller }: { onAddToCart: (item: any) => void; reseller: any }) => {
   const [plans, setPlans] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedClients, setSelectedClients] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    const q = collection(db, "plans");
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    // Fetch plans
+    const qPlans = collection(db, "plans");
+    const unsubPlans = onSnapshot(qPlans, (snapshot) => {
       const plansData = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
         .filter((p: any) => p.active !== false && p.category === 'resale')
         .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
       setPlans(plansData);
       setLoading(false);
-    }, (error) => {
-      console.error("Error fetching resale plans:", error);
-      setLoading(false);
     });
-    return () => unsubscribe();
-  }, []);
+
+    // Fetch reseller's clients
+    const qClients = query(collection(db, "users"), where("resellerId", "==", reseller.uid), where("role", "==", "client"));
+    const unsubClients = onSnapshot(qClients, (snap) => {
+      setClients(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    return () => {
+      unsubPlans();
+      unsubClients();
+    };
+  }, [reseller.uid]);
 
   if (loading) return <div className="p-12 text-center text-slate-500">Carregando planos para revenda...</div>;
 
@@ -1499,19 +1509,34 @@ const ResalePlans = ({ onAddToCart }: { onAddToCart: (item: any) => void }) => {
           <div key={plan.id} className="p-8 rounded-[32px] bg-white border border-slate-100 shadow-sm hover:shadow-xl transition-all flex flex-col relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-vialinks-purple/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
             
-            <div className="mb-8">
+            <div className="mb-6">
               <h3 className="text-2xl font-black text-slate-900 mb-2">{plan.name}</h3>
-              <div className="flex flex-col">
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-black text-vialinks-purple">
-                    {plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                  </span>
-                  <span className="text-slate-400 text-sm font-bold">/unid</span>
-                </div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-4xl font-black text-vialinks-purple">
+                  {plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </span>
+                <span className="text-slate-400 text-sm font-bold">/unid</span>
               </div>
             </div>
 
-            <ul className="space-y-4 mb-10 flex-grow">
+            <div className="mb-6">
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Comprar para qual cliente?</label>
+              <select 
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-vialinks-purple bg-slate-50"
+                value={selectedClients[plan.id] || ""}
+                onChange={e => setSelectedClients({ ...selectedClients, [plan.id]: e.target.value })}
+              >
+                <option value="">Selecione um cliente...</option>
+                {clients.map(c => (
+                  <option key={c.id} value={c.id}>{c.displayName || c.email}</option>
+                ))}
+              </select>
+              {clients.length === 0 && (
+                <p className="text-[10px] text-vialinks-orange mt-2 font-medium">Cadastre clientes na aba "Meus Clientes" primeiro.</p>
+              )}
+            </div>
+
+            <ul className="space-y-4 mb-8 flex-grow">
               {plan.features?.slice(0, 5).map((f: string, i: number) => (
                 <li key={i} className="flex items-center gap-3 text-slate-600 text-sm">
                   <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
@@ -1523,15 +1548,24 @@ const ResalePlans = ({ onAddToCart }: { onAddToCart: (item: any) => void }) => {
             </ul>
 
             <button 
-              onClick={() => onAddToCart({
-                id: plan.id,
-                name: plan.name,
-                price: plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-                numericPrice: plan.price,
-                quantity: 1,
-                paymentLink: plan.paymentLink
-              })}
-              className="w-full bg-vialinks-purple text-white py-4 rounded-2xl font-black shadow-lg shadow-vialinks-purple/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              disabled={!selectedClients[plan.id]}
+              onClick={() => {
+                const targetClient = clients.find(c => c.id === selectedClients[plan.id]);
+                onAddToCart({
+                  id: plan.id,
+                  name: `${plan.name} (Para: ${targetClient?.displayName || targetClient?.email})`,
+                  price: plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+                  numericPrice: plan.price,
+                  quantity: 1,
+                  paymentLink: plan.paymentLink,
+                  targetClientId: selectedClients[plan.id]
+                });
+              }}
+              className={`w-full py-4 rounded-2xl font-black shadow-lg transition-all flex items-center justify-center gap-2 ${
+                selectedClients[plan.id] 
+                  ? 'bg-vialinks-purple text-white shadow-vialinks-purple/20 hover:scale-[1.02] active:scale-[0.98]' 
+                  : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+              }`}
             >
               Comprar para Revender <ArrowRight className="w-5 h-5" />
             </button>

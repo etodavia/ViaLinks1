@@ -65,15 +65,60 @@ export default async function handler(req: any, res: any) {
       const session = event.data.object as Stripe.Checkout.Session;
       console.log("[Webhook] Payment success for session:", session.id);
       
+      const metadata = session.metadata || {};
+      const targetClientId = metadata.targetClientId;
+      const saleId = metadata.saleId;
+      const buyerEmail = session.customer_email || metadata.customerEmail;
+
       if (db) {
+        // 1. Log Payment
         await db.collection('payments').add({
           sessionId: session.id,
-          email: session.customer_email,
+          email: buyerEmail,
+          targetClientId,
           amount: session.amount_total,
           status: 'completed',
-          metadata: session.metadata,
+          metadata,
           timestamp: admin.firestore.FieldValue.serverTimestamp()
         });
+
+        // 2. Update Sale Status
+        if (saleId) {
+          try {
+            await db.collection('sales').doc(saleId).update({
+              status: 'paid',
+              paidAt: admin.firestore.FieldValue.serverTimestamp(),
+              stripeSessionId: session.id
+            });
+          } catch (e) {
+            console.error("[Webhook] Sale update failed:", e);
+          }
+        }
+
+        // 3. Activate Target User
+        const activationId = targetClientId || buyerEmail;
+        if (activationId) {
+          try {
+            if (targetClientId) {
+              await db.collection('users').doc(targetClientId).update({
+                hasPaid: true,
+                planActivatedAt: admin.firestore.FieldValue.serverTimestamp()
+              });
+              console.log("[Webhook] Activated user by ID:", targetClientId);
+            } else if (buyerEmail) {
+              const userSnap = await db.collection('users').where('email', '==', buyerEmail).limit(1).get();
+              if (!userSnap.empty) {
+                await userSnap.docs[0].ref.update({
+                  hasPaid: true,
+                  planActivatedAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+                console.log("[Webhook] Activated user by Email:", buyerEmail);
+              }
+            }
+          } catch (e) {
+            console.error("[Webhook] User activation failed:", e);
+          }
+        }
       }
     }
 
