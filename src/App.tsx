@@ -1271,14 +1271,14 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
                 </ul>
                 <button 
                   onClick={() => {
-                    const finalPrice = plan.numericPrice || (typeof plan.price === 'number' ? plan.price : parseFloat(String(plan.price).replace(/[^\d,]/g, '').replace(',', '.')));
+                    const finalPrice = typeof plan.numericPrice === 'number' ? plan.numericPrice : (typeof plan.price === 'number' ? plan.price : parseFloat(String(plan.price || '0').replace(/[^\d.,]/g, '').replace(',', '.')));
                     const finalLink = plan.paymentLink;
                     
                     onAddToCart({ 
                       id: plan.id, 
                       name: plan.name, 
-                      price: finalPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), 
-                      numericPrice: finalPrice,
+                      price: typeof plan.price === 'number' ? plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : plan.price, 
+                      numericPrice: isNaN(finalPrice) ? 0 : finalPrice,
                       quantity: 1,
                       paymentLink: finalLink
                     });
@@ -1609,11 +1609,11 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
         window.location.href = finalUrl;
       } else {
         // Final Fallback: If no link is found, return to landing
-        setIntentError("Link de pagamento indisponível. Entre em contato com o suporte.");
+        setIntentError("Link de pagamento indisponível para este plano no momento.");
       }
     } catch (err: any) {
       console.error("Checkout Capture Error:", err);
-      setIntentError("Erro ao processar seu pedido. Tente novamente.");
+      setIntentError(`Erro ao processar seu pedido. Detalhes: ${err.message || 'Erro desconhecido'}`);
     } finally {
       setIsIntentLoading(false);
     }

@@ -56,6 +56,7 @@ export default async function handler(req: any, res: any) {
       return isNaN(parsed) ? 0 : parsed;
     };
 
+    const baseUrl = process.env.APP_URL || (req.headers.host ? `https://${req.headers.host}` : "");
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: items.map((item: any) => {
@@ -72,8 +73,8 @@ export default async function handler(req: any, res: any) {
       }),
       mode: 'payment',
       customer_email: email,
-      success_url: `${process.env.APP_URL}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.APP_URL}/?view=checkout`,
+      success_url: `${baseUrl}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/?view=checkout`,
       metadata: { customerName: name || "", customerPhone: phone || "", taxId: taxId || "" }
     });
 

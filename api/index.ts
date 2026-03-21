@@ -61,8 +61,8 @@ export default async function handler(req: any, res: any) {
     try {
       const db = initFirebase();
       if (!db) return res.status(200).json([]);
-      const plansSnapshot = await db.collection('config').doc('plans').get();
-      const plans = plansSnapshot.exists ? (plansSnapshot.data()?.plans || []) : [];
+      const plansSnapshot = await db.collection('plans').orderBy('order', 'asc').get();
+      const plans = plansSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       return res.status(200).json(plans);
     } catch (err) {
       return res.status(200).json([]);
