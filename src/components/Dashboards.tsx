@@ -1496,10 +1496,9 @@ const ResalePlans = ({ onAddToCart }: { onAddToCart: (item: any) => void }) => {
             <div className="mb-8">
               <h3 className="text-2xl font-black text-slate-900 mb-2">{plan.name}</h3>
               <div className="flex flex-col">
-                <span className="text-sm text-slate-400 line-through">De {plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
                 <div className="flex items-baseline gap-1">
                   <span className="text-4xl font-black text-vialinks-purple">
-                    {plan.resellerPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    {plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </span>
                   <span className="text-slate-400 text-sm font-bold">/unid</span>
                 </div>

@@ -1179,7 +1179,6 @@ const Cycle = ({ onAddToCart, content }: { onAddToCart: (item: any) => void; con
 const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: (v: any) => void; onAddToCart: (item: any) => void; content?: any }) => {
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState<"direct" | "resale">("direct");
   useEffect(() => {
     // Read plans directly from Firestore 'plans' collection
     const unsubscribe = onSnapshot(collection(db, "plans"), (snapshot) => {
@@ -1211,23 +1210,6 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
           <p className="text-lg text-slate-400">{content?.pricingDesc || "Escolha o plano ideal para o seu momento profissional. Pagamento único, sem mensalidades."}</p>
         </div>
 
-        <div className="flex justify-center mb-12">
-          <div className="bg-white/5 p-1 rounded-2xl border border-white/10 flex">
-            <button 
-              onClick={() => setActiveCategory("direct")}
-              className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeCategory === 'direct' ? 'bg-vialinks-orange text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
-            >
-              Uso Profissional
-            </button>
-            <button 
-              onClick={() => setActiveCategory("resale")}
-              className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeCategory === 'resale' ? 'bg-vialinks-purple text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
-            >
-              Para Revenda
-            </button>
-          </div>
-        </div>
-
 
         {loading ? (
           <div className="flex justify-center py-12">
@@ -1235,7 +1217,7 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
           </div>
         ) : plans.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 relative z-20">
-            {plans.filter(p => !p.category || p.category === activeCategory).map((plan, i) => (
+            {plans.filter(p => !p.category || p.category === "direct").map((plan, i) => (
               <motion.div
                 key={plan.id}
                 initial={{ opacity: 0, y: 20 }}
