@@ -1354,37 +1354,73 @@ const ResellerTraining = ({ reseller }: any) => {
   const modules = [
     {
       id: "m1",
-      title: "Módulo 1: Primeiros Passos",
+      title: "Módulo 1: O Fluxo de Trabalho do Revendedor",
       lessons: [
         {
           id: "l1",
-          title: "Bem-vindo ao Programa",
+          title: "Por que Cadastrar o Cliente Primeiro?",
           slides: [
-            { title: "Seu Sucesso Começa Aqui", content: "Parabéns por se tornar um revendedor oficial ViaLinks! Vamos transformar o mercado juntos." },
-            { title: "O Modelo de Negócio", content: "Você adquire ativações com desconto e revende pelo preço que desejar, gerenciando seus próprios clientes." },
-            { title: "Margem de Lucro", content: "Nossa sugestão é uma margem de 100% a 200%. O valor está no seu serviço de consultoria." }
+            { title: "A Regra de Ouro", content: "Sempre cadastre os dados do seu cliente na aba 'Meus Clientes' ANTES de realizar qualquer compra na loja." },
+            { title: "Vínculo de Pedido", content: "Ao comprar um plano, o sistema perguntará para qual cliente é aquele pedido. Se o cliente não estiver cadastrado, você não poderá vinculá-lo!" },
+            { title: "Gestão Transparente", content: "Cadastrar o cliente primeiro permite que VOCÊ acompanhe o status do briefing e entrega dele de forma individual." }
           ]
         },
         {
           id: "l2",
-          title: "Configurando seu Painel",
+          title: "Tour pelo Painel de Controle",
           slides: [
-            { title: "Visão Geral", content: "Seu painel é sua central de comando. Aqui você vê pedidos, clientes e briefings." },
-            { title: "Aba Meus Clientes", content: "Adicione seus clientes ANTES de realizar a compra para vincular os pedidos corretamente." }
+            { title: "Sua Central de Comando", content: "Na Home, você vê o resumo de suas vendas, lucros e quantidade de clientes ativos." },
+            { title: "Aba 'Meus Clientes'", content: "Aqui é onde você adiciona novos nomes à sua carteira e verifica quem já preencheu o briefing." },
+            { title: "Loja ViaLinks", content: "Acesse planos com preços exclusivos de revenda. O desconto é aplicado automaticamente para sua conta." }
+          ]
+        },
+        {
+          id: "l3",
+          title: "Entendendo os Status dos Pedidos",
+          slides: [
+            { title: "Status: Aguardando Pagamento", content: "Seu pedido foi gerado, mas ainda não recebemos a confirmação. O cliente NÃO aparece na lista de briefings ainda." },
+            { title: "Status: Pago / Briefing Liberado", content: "Agora o cliente já pode preencher os dados do cartão dele através do seu link de revenda." },
+            { title: "Status: Em Produção", content: "Nossos designers estão criando o layout. Prazo médio de 24h a 48h úteis." }
           ]
         }
       ]
     },
     {
       id: "m2",
-      title: "Módulo 2: Estratégias de Venda",
+      title: "Módulo 2: Vendendo como um Especialista",
       lessons: [
         {
-          id: "l3",
-          title: "A Abordagem Perfeita",
+          id: "l4",
+          title: "Precificação e Lucro",
           slides: [
-            { title: "Identificando o Cliente", content: "Busque profissionais liberais e donos de pequenas empresas que ainda usam cartões de papel." },
-            { title: "O Pitch de Elevador", content: "Não venda um cartão, venda uma porta de entrada digital para o negócio dele." }
+            { title: "Preço Sugerido", content: "Você compra por R$ 99,90. Sugerimos a venda por R$ 247,00 (Venda Única) ou R$ 197,00 (Combo)." },
+            { title: "Valor Agregado", content: "Não venda o 'cartão'. Venda o faturamento extra que o cliente terá ao ser encontrado mais facilmente no Google e Instagram." },
+            { title: "Recorrência", content: "Você pode cobrar uma taxa de manutenção anual ou por alteração de dados, aumentando seu ganho a longo prazo." }
+          ]
+        },
+        {
+          id: "l5",
+          title: "Script de Abordagem Matador",
+          slides: [
+            { title: "Início da Conversa", content: "'Olá [Nome], vi seu Instagram e achei seu trabalho excelente! Mas percebi que seu link de contato é um pouco confuso...'" },
+            { title: "A Solução", content: "'Eu trabalho com uma tecnologia que simplifica tudo em um único cartão digital inteligente. Posso te enviar um exemplo?'" },
+            { title: "Fechamento", content: "'O investimento é único e você nunca mais vai precisar imprimir cartões de papel novamente. Vamos profissionalizar seu negócio?'" }
+          ]
+        }
+      ]
+    },
+    {
+      id: "m3",
+      title: "Módulo 3: Tirando Dúvidas (FAQ)",
+      lessons: [
+        {
+          id: "l6",
+          title: "Dúvidas Frequentes do Revendedor",
+          slides: [
+            { title: "Quem preenche o Briefing?", content: "Pode ser você ou o seu cliente. Se você quer um serviço 'Black', peça as fotos e preencha você mesmo para garantir a qualidade." },
+            { title: "E se o cliente desistir?", content: "Pedidos com pagamento confirmado e em produção não possuem estorno. Garanta o fechamento antes de comprar o plano." },
+            { title: "Como o cliente recebe o Cartão?", content: "Assim que finalizado, o sistema gera o link e o QR Code. Você mesmo pode enviar para ele pelo WhatsApp." },
+            { title: "Suporte ViaLinks", content: "Qualquer problema técnico, use o botão de suporte no rodapé do seu painel. Respondemos em até 4h comerciais." }
           ]
         }
       ]
@@ -1397,44 +1433,56 @@ const ResellerTraining = ({ reseller }: any) => {
 
     return (
       <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden min-h-[500px] flex flex-col mb-12">
-        <div className="bg-slate-900 p-6 flex justify-between items-center">
+        <div className="bg-slate-900 p-6 flex justify-between items-center shadow-lg">
           <button 
             onClick={() => { setSelectedLesson(null); setCurrentSlide(0); }}
             className="text-white/60 hover:text-white flex items-center gap-2 font-bold transition-all"
           >
             <ChevronLeft className="w-5 h-5" /> Voltar para Aulas
           </button>
-          <div className="text-white font-black uppercase tracking-widest text-[10px]">
-            {lesson.title} • Slide {currentSlide + 1} de {lesson.slides.length}
+          <div className="px-4 py-1.5 rounded-full bg-white/10 text-white font-black uppercase tracking-widest text-[9px] border border-white/10">
+            {lesson.title} • Slide {currentSlide + 1} / {lesson.slides.length}
           </div>
         </div>
         
-        <div className="flex-1 p-8 flex flex-col items-center justify-center min-h-[400px]">
-          <div className="w-full max-w-4xl bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 p-12 text-center relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-8 opacity-5">
-              <BookOpen className="w-64 h-64 text-vialinks-purple" />
+        <div className="flex-1 p-8 flex flex-col items-center justify-center min-h-[450px]">
+          <div className="w-full max-w-4xl bg-slate-50 rounded-[40px] border-4 border-white shadow-inner p-12 text-center relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 opacity-[0.03]">
+              <Zap className="w-64 h-64 text-vialinks-purple rotate-12" />
             </div>
-            <div className="relative z-10 space-y-6">
-              <motion.div
-                key={`${lesson.id}-${currentSlide}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-6"
-              >
-                <h2 className="text-4xl lg:text-5xl font-black text-slate-900 leading-tight">{slide.title}</h2>
-                <div className="w-24 h-1.5 bg-vialinks-orange mx-auto rounded-full" />
-                <p className="text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">{slide.content}</p>
-              </motion.div>
-            </div>
+            
+            <motion.div
+              key={`${lesson.id}-${currentSlide}`}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+              className="relative z-10 space-y-8"
+            >
+              <div className="inline-block px-4 py-1 rounded-full bg-vialinks-purple/10 text-vialinks-purple text-[10px] font-black uppercase tracking-widest mb-4">
+                 Dica do Especialista
+              </div>
+              <h2 className="text-4xl lg:text-6xl font-black text-slate-900 leading-tight tracking-tight">{slide.title}</h2>
+              <div className="w-32 h-2 bg-vialinks-orange mx-auto rounded-full shadow-lg shadow-vialinks-orange/20" />
+              <p className="text-xl lg:text-2xl text-slate-600 max-w-2xl mx-auto font-medium leading-[1.6]">
+                {slide.content}
+              </p>
+              
+              {/* Illustration Placeholder - Can be replaced with images later */}
+              <div className="mt-12 flex justify-center gap-4">
+                <div className="w-3 h-3 rounded-full bg-vialinks-purple/20"></div>
+                <div className="w-3 h-3 rounded-full bg-vialinks-purple/40"></div>
+                <div className="w-3 h-3 rounded-full bg-vialinks-purple/60"></div>
+              </div>
+            </motion.div>
           </div>
           
-          <div className="flex gap-4 w-full max-w-4xl justify-between mt-8">
+          <div className="flex gap-6 w-full max-w-4xl justify-between mt-12">
             <button 
               disabled={currentSlide === 0}
               onClick={() => setCurrentSlide(prev => prev - 1)}
-              className="px-8 py-4 rounded-xl border border-slate-200 font-bold hover:bg-slate-50 disabled:opacity-30 transition-all text-slate-600"
+              className="px-10 py-5 rounded-2xl border-2 border-slate-100 font-bold hover:bg-slate-50 disabled:opacity-30 transition-all text-slate-500 flex items-center gap-2 group"
             >
-              Slide Anterior
+              <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" /> Slide Anterior
             </button>
             <button 
               onClick={() => {
@@ -1443,11 +1491,13 @@ const ResellerTraining = ({ reseller }: any) => {
                 } else {
                   setSelectedLesson(null);
                   setCurrentSlide(0);
+                  alert("Excelente! Aula concluída com sucesso. Continue sua jornada!");
                 }
               }}
-              className="px-12 py-4 rounded-xl bg-vialinks-purple text-white font-black shadow-lg shadow-vialinks-purple/20 hover:scale-[1.05] active:scale-95 transition-all"
+              className="px-14 py-5 rounded-2xl bg-gradient-to-br from-vialinks-purple to-vialinks-dark text-white font-black shadow-2xl shadow-vialinks-purple/30 hover:scale-[1.03] active:scale-95 transition-all flex items-center gap-2"
             >
               {currentSlide === lesson.slides.length - 1 ? "Concluir Aula" : "Próximo Slide"}
+              {currentSlide !== lesson.slides.length - 1 && <ArrowRight className="w-5 h-5" />}
             </button>
           </div>
         </div>
@@ -1456,37 +1506,68 @@ const ResellerTraining = ({ reseller }: any) => {
   }
 
   return (
-    <div className="space-y-12 pb-12">
+    <div className="space-y-16 pb-24">
+      <div className="bg-gradient-to-r from-emerald-600 to-emerald-800 p-8 rounded-[32px] text-white shadow-2xl shadow-emerald-600/20 relative overflow-hidden mb-12">
+         <div className="absolute right-0 top-0 opacity-10 -rotate-12 translate-x-1/4 -translate-y-1/4">
+           <Zap className="w-64 h-64" />
+         </div>
+         <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
+           <div>
+             <h2 className="text-3xl font-black mb-2">Seu Sucesso é o Nosso Objetivo</h2>
+             <p className="text-emerald-100 font-medium max-w-lg">Preparamos este material para transformar você em um revendedor de elite. Domine o processo e multiplique seus ganhos.</p>
+           </div>
+           <div className="px-6 py-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-center">
+             <div className="text-[10px] font-black uppercase opacity-60">Status do Treinamento</div>
+             <div className="text-2xl font-black">6 Aulas Disponíveis</div>
+           </div>
+         </div>
+      </div>
+
       {modules.map(module => (
-        <div key={module.id} className="space-y-6">
-          <div className="flex items-center gap-4">
-             <div className="w-10 h-10 rounded-xl bg-vialinks-purple flex items-center justify-center text-white shadow-lg shadow-vialinks-purple/20">
-               <BookOpen className="w-5 h-5" />
+        <div key={module.id} className="space-y-8">
+          <div className="flex items-center gap-5">
+             <div className="w-14 h-14 rounded-2xl bg-vialinks-purple flex items-center justify-center text-white shadow-xl shadow-vialinks-purple/20">
+               <BookOpen className="w-7 h-7" />
              </div>
-             <h2 className="text-2xl font-black text-slate-900">{module.title}</h2>
+             <div>
+               <h2 className="text-3xl font-black text-slate-900 tracking-tight">{module.title}</h2>
+               <p className="text-slate-400 font-bold text-sm uppercase tracking-widest">{module.lessons.length} AULAS INTERATIVAS</p>
+             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {module.lessons.map(lesson => (
               <div 
                 key={lesson.id} 
-                className="group bg-white p-7 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:border-vialinks-purple/30 transition-all cursor-pointer relative overflow-hidden flex flex-col h-full"
+                className="group bg-white p-8 rounded-[36px] border border-slate-100 shadow-sm hover:shadow-2xl hover:border-vialinks-purple/20 transition-all cursor-pointer relative overflow-hidden flex flex-col h-full active:scale-[0.98]"
                 onClick={() => setSelectedLesson(lesson)}
               >
-                <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-[0.08] transition-all">
-                   <PlayCircle className="w-32 h-32 text-vialinks-purple" />
+                <div className="absolute top-0 right-0 p-6 opacity-[0.02] group-hover:opacity-[0.06] transition-all transform group-hover:rotate-12 group-hover:scale-125 duration-700">
+                   <PlayCircle className="w-36 h-36 text-vialinks-purple" />
                 </div>
-                <div className="flex-1">
-                  <p className="text-[10px] font-black text-vialinks-purple uppercase tracking-widest mb-2">Aula Interativa</p>
-                  <h3 className="text-xl font-bold text-slate-900 mb-4 group-hover:text-vialinks-purple transition-colors">{lesson.title}</h3>
-                  <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
-                    <Package className="w-4 h-4" /> {lesson.slides.length} slides de conteúdo
+                <div className="flex-1 relative z-10">
+                  <div className="w-12 h-1 bg-vialinks-purple mb-6 rounded-full group-hover:w-20 transition-all duration-500" />
+                  <p className="text-[10px] font-black text-vialinks-purple uppercase tracking-widest mb-3">Lição Detalhada</p>
+                  <h3 className="text-2xl font-extrabold text-slate-900 mb-6 group-hover:text-vialinks-purple transition-colors leading-tight">{lesson.title}</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-slate-400 text-xs font-bold">
+                      <div className="w-5 h-5 rounded-full bg-slate-50 flex items-center justify-center text-[10px]">1</div>
+                      Conceitos Teóricos
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-400 text-xs font-bold">
+                      <div className="w-5 h-5 rounded-full bg-slate-50 flex items-center justify-center text-[10px]">2</div>
+                      Passo a Passo Visual
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-400 text-xs font-bold">
+                      <div className="w-5 h-5 rounded-full bg-slate-50 flex items-center justify-center text-[10px]">3</div>
+                      Dicas de Fechamento
+                    </div>
                   </div>
                 </div>
-                <div className="mt-8 flex justify-between items-center">
-                  <span className="text-xs font-bold text-slate-300 group-hover:text-vialinks-purple/50 transition-all uppercase tracking-widest">Iniciar Aula</span>
-                  <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-vialinks-purple group-hover:text-white transition-all shadow-sm">
-                    <ChevronRight className="w-5 h-5" />
+                <div className="mt-12 flex justify-between items-center relative z-10">
+                  <span className="text-[11px] font-black text-slate-300 group-hover:text-vialinks-purple transition-all uppercase tracking-[2px]">Iniciar Conteúdo</span>
+                  <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center group-hover:bg-vialinks-purple group-hover:text-white group-hover:rotate-[360deg] transition-all duration-700 shadow-sm">
+                    <ArrowRight className="w-6 h-6" />
                   </div>
                 </div>
               </div>
