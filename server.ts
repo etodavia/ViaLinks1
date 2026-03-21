@@ -82,8 +82,8 @@ export async function createApp() {
   apiRouter.get("/plans", async (req, res) => {
     try {
       if (!db) return res.json([]);
-      const plansSnapshot = await db.collection('config').doc('plans').get();
-      const plans = plansSnapshot.exists ? (plansSnapshot.data()?.plans || []) : [];
+      const plansSnapshot = await db.collection('plans').orderBy('order', 'asc').get();
+      const plans = plansSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
       res.json(plans);
     } catch (error) {
       console.error("[API] Plans Error:", error);
@@ -165,8 +165,8 @@ export async function createApp() {
       let total = 0;
       if (db) {
         try {
-          const plansDoc = await db.collection('config').doc('plans').get();
-          const plans = plansDoc.data()?.plans || [];
+          const plansSnapshot = await db.collection('plans').get();
+          const plans = plansSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
           for (const item of items) {
             const plan = plans.find((p: any) => p.id === item.id);
             if (plan) total += (parsePrice(plan.numericPrice || plan.price)) * (item.quantity || 1);

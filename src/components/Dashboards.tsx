@@ -1180,6 +1180,7 @@ export const StoreTab = ({ user, setView, onAddToCart }: any) => {
       if (!snapshot.empty) {
         const plansData = snapshot.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter((p: any) => p.category === 'direct' || !p.category) 
           .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
         setPlans(plansData);
       } else {
@@ -1471,7 +1472,7 @@ const ResalePlans = ({ onAddToCart }: { onAddToCart: (item: any) => void }) => {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const plansData = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter((p: any) => p.resellerPrice > 0);
+        .filter((p: any) => p.category === 'resale');
       setPlans(plansData);
       setLoading(false);
     });
@@ -1520,10 +1521,10 @@ const ResalePlans = ({ onAddToCart }: { onAddToCart: (item: any) => void }) => {
               onClick={() => onAddToCart({
                 id: plan.id,
                 name: plan.name,
-                price: plan.resellerPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-                numericPrice: plan.resellerPrice,
+                price: plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+                numericPrice: plan.price,
                 quantity: 1,
-                paymentLink: plan.resellerLink || plan.paymentLink
+                paymentLink: plan.paymentLink
               })}
               className="w-full bg-vialinks-purple text-white py-4 rounded-2xl font-black shadow-lg shadow-vialinks-purple/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
             >
@@ -3073,7 +3074,8 @@ const PlanManagement = () => {
     active: true,
     order: 0,
     popular: false,
-    cta: ""
+    cta: "",
+    category: "direct" // Added category
   });
 
   useEffect(() => {
@@ -3104,7 +3106,7 @@ const PlanManagement = () => {
         });
       }
       setIsAdding(false);
-      setNewPlan({ name: "", price: 0, resellerPrice: 0, features: "", excludedFeatures: "", active: true, order: 0, popular: false, cta: "", paymentLink: "", resellerLink: "" });
+      setNewPlan({ name: "", price: 0, features: "", excludedFeatures: "", active: true, order: 0, popular: false, cta: "", paymentLink: "", category: "direct" });
     } catch (error) {
       handleFirestoreError(error, editingPlanId ? OperationType.UPDATE : OperationType.CREATE, "plans");
     }
@@ -3121,7 +3123,20 @@ const PlanManagement = () => {
         order: 1,
         popular: false,
         cta: "Começar Agora",
-        paymentLink: ""
+        paymentLink: "",
+        category: "direct"
+      },
+      {
+        name: "Revenda Silver",
+        price: 49,
+        features: ["Preço Atacado", "Suporte VIP", "Painel de Gestão"],
+        excludedFeatures: [],
+        active: true,
+        order: 4,
+        popular: false,
+        cta: "Comprar para Revenda",
+        paymentLink: "",
+        category: "resale"
       },
       {
         name: "Plano Profissional + NFC",
@@ -3143,7 +3158,8 @@ const PlanManagement = () => {
         order: 3,
         popular: false,
         cta: "Falar com Consultor",
-        paymentLink: ""
+        paymentLink: "",
+        category: "direct"
       }
     ];
 
@@ -3169,8 +3185,7 @@ const PlanManagement = () => {
       popular: p.popular || false,
       cta: p.cta || "",
       paymentLink: p.paymentLink || "",
-      resellerPrice: p.resellerPrice || 0,
-      resellerLink: p.resellerLink || ""
+      category: p.category || (p.resellerPrice > 0 ? "resale" : "direct")
     });
     setEditingPlanId(p.id);
     setIsAdding(true);
@@ -3197,7 +3212,7 @@ const PlanManagement = () => {
               setIsAdding(!isAdding);
               if (isAdding) {
                 setEditingPlanId(null);
-                setNewPlan({ name: "", price: 0, resellerPrice: 0, features: "", excludedFeatures: "", active: true, order: 0, popular: false, cta: "", paymentLink: "", resellerLink: "" });
+                setNewPlan({ name: "", price: 0, features: "", excludedFeatures: "", active: true, order: 0, popular: false, cta: "", paymentLink: "", category: "direct" });
               }
             }}
             className="bg-vialinks-orange text-white px-6 py-2 rounded-xl font-bold"
@@ -3232,29 +3247,27 @@ const PlanManagement = () => {
                 onChange={e => setNewPlan({...newPlan, price: parseFloat(e.target.value)})}
               />
             </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Categoria</label>
+              <select 
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-vialinks-orange bg-white"
+                value={newPlan.category}
+                onChange={e => setNewPlan({...newPlan, category: e.target.value})}
+              >
+                <option value="direct">Venda Direta</option>
+                <option value="resale">Revenda</option>
+              </select>
+            </div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Link de Pagamento (Direto)</label>
-              <input 
-                type="url" 
-                placeholder="https://buy.stripe.com/..."
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-vialinks-orange"
-                value={newPlan.paymentLink || ""}
-                onChange={e => setNewPlan({...newPlan, paymentLink: e.target.value})}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase mb-2 text-vialinks-purple">Link de Pagamento Revendedor (Direto)</label>
-              <input 
-                type="url" 
-                placeholder="https://buy.stripe.com/..."
-                className="w-full px-4 py-3 rounded-xl border border-vialinks-purple/20 outline-none focus:ring-2 focus:ring-vialinks-purple bg-vialinks-purple/5"
-                value={newPlan.resellerLink || ""}
-                onChange={e => setNewPlan({...newPlan, resellerLink: e.target.value})}
-              />
-            </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Link de Pagamento (Direto/Revenda)</label>
+            <input 
+              type="url" 
+              placeholder="https://buy.stripe.com/..."
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-vialinks-orange"
+              value={newPlan.paymentLink || ""}
+              onChange={e => setNewPlan({...newPlan, paymentLink: e.target.value})}
+            />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -3310,9 +3323,11 @@ const PlanManagement = () => {
           <div key={p.id} className="p-6 rounded-2xl border border-slate-100 bg-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <p className="font-bold text-slate-900">{p.name}</p>
-              <div className="flex gap-4">
-                <p className="text-sm text-slate-500">Público: R$ {p.price}</p>
-                {p.resellerPrice > 0 && <p className="text-sm text-vialinks-purple font-bold">Revendedor: R$ {p.resellerPrice}</p>}
+              <div className="flex gap-4 items-center">
+                <p className="text-sm text-slate-500">Preço: R$ {p.price}</p>
+                <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-md ${p.category === 'resale' ? 'bg-vialinks-purple/10 text-vialinks-purple' : 'bg-vialinks-orange/10 text-vialinks-orange'}`}>
+                  {p.category === 'resale' ? 'Revenda' : 'Direta'}
+                </span>
               </div>
               <p className="text-[10px] text-slate-400 mt-1">{p.features?.length || 0} vantagens listadas</p>
             </div>

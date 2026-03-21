@@ -1179,6 +1179,7 @@ const Cycle = ({ onAddToCart, content }: { onAddToCart: (item: any) => void; con
 const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: (v: any) => void; onAddToCart: (item: any) => void; content?: any }) => {
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState<"direct" | "resale">("direct");
   useEffect(() => {
     // Read plans directly from Firestore 'plans' collection
     const unsubscribe = onSnapshot(collection(db, "plans"), (snapshot) => {
@@ -1210,6 +1211,23 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
           <p className="text-lg text-slate-400">{content?.pricingDesc || "Escolha o plano ideal para o seu momento profissional. Pagamento único, sem mensalidades."}</p>
         </div>
 
+        <div className="flex justify-center mb-12">
+          <div className="bg-white/5 p-1 rounded-2xl border border-white/10 flex">
+            <button 
+              onClick={() => setActiveCategory("direct")}
+              className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeCategory === 'direct' ? 'bg-vialinks-orange text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+            >
+              Uso Profissional
+            </button>
+            <button 
+              onClick={() => setActiveCategory("resale")}
+              className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeCategory === 'resale' ? 'bg-vialinks-purple text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+            >
+              Para Revenda
+            </button>
+          </div>
+        </div>
+
 
         {loading ? (
           <div className="flex justify-center py-12">
@@ -1217,7 +1235,7 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
           </div>
         ) : plans.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 relative z-20">
-            {plans.map((plan, i) => (
+            {plans.filter(p => !p.category || p.category === activeCategory).map((plan, i) => (
               <motion.div
                 key={plan.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -1236,31 +1254,15 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
                 )}
                 <div className="mb-8">
                   <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
-                  <div className="flex flex-col gap-1">
-                    {user?.role === 'reseller' && plan.resellerPrice > 0 && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-slate-400 line-through">
-                          {typeof plan.price === 'number' 
-                            ? plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-                            : plan.price}
-                        </span>
-                        <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                          Oferta Revendedor
-                        </span>
-                      </div>
-                    )}
                     <div className="flex items-baseline gap-1">
                       <span className="text-4xl font-extrabold">
-                        {user?.role === 'reseller' && plan.resellerPrice > 0
-                          ? plan.resellerPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-                          : (typeof plan.price === 'number' 
-                              ? plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-                              : plan.price)}
+                        {typeof plan.price === 'number' 
+                          ? plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                          : plan.price}
                       </span>
-                      <span className={plan.popular ? 'text-purple-200' : 'text-slate-400'}>/único</span>
+                      <span className={plan.popular ? 'text-purple-200' : 'text-slate-400'}>{plan.category === 'resale' ? '/unid' : '/único'}</span>
                     </div>
                   </div>
-                </div>
                 <ul className="space-y-4 mb-10 flex-grow">
                   {(plan.features || []).map((feature: any, idx: number) => {
                     const isObject = typeof feature === 'object' && feature !== null;
@@ -1287,9 +1289,8 @@ const Pricing = ({ user, setView, onAddToCart, content }: { user: any; setView: 
                 </ul>
                 <button 
                   onClick={() => {
-                    const isReseller = user?.role === 'reseller';
-                    const finalPrice = (isReseller && plan.resellerPrice > 0) ? plan.resellerPrice : (plan.numericPrice || (typeof plan.price === 'number' ? plan.price : parseFloat(String(plan.price).replace(/[^\d,]/g, '').replace(',', '.'))));
-                    const finalLink = (isReseller && plan.resellerLink) ? plan.resellerLink : plan.paymentLink;
+                    const finalPrice = plan.numericPrice || (typeof plan.price === 'number' ? plan.price : parseFloat(String(plan.price).replace(/[^\d,]/g, '').replace(',', '.')));
+                    const finalLink = plan.paymentLink;
                     
                     onAddToCart({ 
                       id: plan.id, 
