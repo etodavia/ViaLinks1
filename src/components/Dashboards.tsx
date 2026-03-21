@@ -58,7 +58,10 @@ import {
   Lock,
   Menu,
   UserPlus,
-  RefreshCw
+  RefreshCw,
+  BookOpen,
+  PlayCircle,
+  ChevronLeft
 } from "lucide-react";
 import { FirebaseImage } from "./FirebaseImage";
 import { auth, db, storage } from "../firebase";
@@ -713,12 +716,20 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
           <Package className="w-5 h-5" /> Entrega e Card
         </button>
         {user.role === 'reseller' && (
-          <button 
-            onClick={() => { setActiveTab('reseller-clients'); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'reseller-clients' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-          >
-            <Users className="w-5 h-5" /> Meus Clientes
-          </button>
+          <>
+            <button 
+              onClick={() => { setActiveTab('reseller-clients'); setIsMobileMenuOpen(false); }}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'reseller-clients' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+            >
+              <Users className="w-5 h-5" /> Meus Clientes
+            </button>
+            <button 
+              onClick={() => { setActiveTab('training'); setIsMobileMenuOpen(false); }}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'training' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+            >
+              <BookOpen className="w-5 h-5" /> Treinamento
+            </button>
+          </>
         )}
         {(hasActiveOrders || user.role === 'admin') && (
           <button 
@@ -843,11 +854,13 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
                 {activeTab === 'store' && "Loja ViaLinks"}
                 {activeTab === 'resale-plans' && "Planos para Revenda"}
                 {activeTab === 'reseller-clients' && "Meus Clientes"}
+                {activeTab === 'training' && "Portal de Treinamento"}
               </h1>
               <p className="text-slate-500">
                 {activeTab === 'store' ? "Adquira novos produtos e acessórios para seu card digital." : 
                  activeTab === 'resale-plans' ? "Acesse preços exclusivos de revendedor para escalar seu negócio." :
                  activeTab === 'reseller-clients' ? "Gerencie seus clientes, acompanhe briefings e status de entrega." :
+                 activeTab === 'training' ? "Aprenda a vender e gerenciar seus clientes com excelência." :
                  activeTab === 'config' ? "Gerencie seus dados pessoais e segurança." : "Gerencie sua conta e seus cards ViaLinks."}
               </p>
             </div>
@@ -943,6 +956,7 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
             {activeTab === 'store' && <StoreTab user={user} setView={setView} onAddToCart={onAddToCart} />}
             {activeTab === 'resale-plans' && <ResalePlans onAddToCart={onAddToCart} reseller={user} />}
             {activeTab === 'reseller-clients' && <ResellerClientManagement reseller={user} />}
+            {activeTab === 'training' && <ResellerTraining reseller={user} />}
           </div>
         </div>
       </div>
@@ -1329,6 +1343,157 @@ export const StoreTab = ({ user, setView, onAddToCart }: any) => {
           </div>
         ))}
       </div>
+    </div>
+  );
+};
+
+const ResellerTraining = ({ reseller }: any) => {
+  const [selectedLesson, setSelectedLesson] = useState<any>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  const modules = [
+    {
+      id: "m1",
+      title: "Módulo 1: Primeiros Passos",
+      lessons: [
+        {
+          id: "l1",
+          title: "Bem-vindo ao Programa",
+          slides: [
+            { title: "Seu Sucesso Começa Aqui", content: "Parabéns por se tornar um revendedor oficial ViaLinks! Vamos transformar o mercado juntos." },
+            { title: "O Modelo de Negócio", content: "Você adquire ativações com desconto e revende pelo preço que desejar, gerenciando seus próprios clientes." },
+            { title: "Margem de Lucro", content: "Nossa sugestão é uma margem de 100% a 200%. O valor está no seu serviço de consultoria." }
+          ]
+        },
+        {
+          id: "l2",
+          title: "Configurando seu Painel",
+          slides: [
+            { title: "Visão Geral", content: "Seu painel é sua central de comando. Aqui você vê pedidos, clientes e briefings." },
+            { title: "Aba Meus Clientes", content: "Adicione seus clientes ANTES de realizar a compra para vincular os pedidos corretamente." }
+          ]
+        }
+      ]
+    },
+    {
+      id: "m2",
+      title: "Módulo 2: Estratégias de Venda",
+      lessons: [
+        {
+          id: "l3",
+          title: "A Abordagem Perfeita",
+          slides: [
+            { title: "Identificando o Cliente", content: "Busque profissionais liberais e donos de pequenas empresas que ainda usam cartões de papel." },
+            { title: "O Pitch de Elevador", content: "Não venda um cartão, venda uma porta de entrada digital para o negócio dele." }
+          ]
+        }
+      ]
+    }
+  ];
+
+  if (selectedLesson) {
+    const lesson = selectedLesson;
+    const slide = lesson.slides[currentSlide];
+
+    return (
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden min-h-[500px] flex flex-col mb-12">
+        <div className="bg-slate-900 p-6 flex justify-between items-center">
+          <button 
+            onClick={() => { setSelectedLesson(null); setCurrentSlide(0); }}
+            className="text-white/60 hover:text-white flex items-center gap-2 font-bold transition-all"
+          >
+            <ChevronLeft className="w-5 h-5" /> Voltar para Aulas
+          </button>
+          <div className="text-white font-black uppercase tracking-widest text-[10px]">
+            {lesson.title} • Slide {currentSlide + 1} de {lesson.slides.length}
+          </div>
+        </div>
+        
+        <div className="flex-1 p-8 flex flex-col items-center justify-center min-h-[400px]">
+          <div className="w-full max-w-4xl bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 p-12 text-center relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 opacity-5">
+              <BookOpen className="w-64 h-64 text-vialinks-purple" />
+            </div>
+            <div className="relative z-10 space-y-6">
+              <motion.div
+                key={`${lesson.id}-${currentSlide}`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-6"
+              >
+                <h2 className="text-4xl lg:text-5xl font-black text-slate-900 leading-tight">{slide.title}</h2>
+                <div className="w-24 h-1.5 bg-vialinks-orange mx-auto rounded-full" />
+                <p className="text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">{slide.content}</p>
+              </motion.div>
+            </div>
+          </div>
+          
+          <div className="flex gap-4 w-full max-w-4xl justify-between mt-8">
+            <button 
+              disabled={currentSlide === 0}
+              onClick={() => setCurrentSlide(prev => prev - 1)}
+              className="px-8 py-4 rounded-xl border border-slate-200 font-bold hover:bg-slate-50 disabled:opacity-30 transition-all text-slate-600"
+            >
+              Slide Anterior
+            </button>
+            <button 
+              onClick={() => {
+                if (currentSlide < lesson.slides.length - 1) {
+                  setCurrentSlide(prev => prev + 1);
+                } else {
+                  setSelectedLesson(null);
+                  setCurrentSlide(0);
+                }
+              }}
+              className="px-12 py-4 rounded-xl bg-vialinks-purple text-white font-black shadow-lg shadow-vialinks-purple/20 hover:scale-[1.05] active:scale-95 transition-all"
+            >
+              {currentSlide === lesson.slides.length - 1 ? "Concluir Aula" : "Próximo Slide"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-12 pb-12">
+      {modules.map(module => (
+        <div key={module.id} className="space-y-6">
+          <div className="flex items-center gap-4">
+             <div className="w-10 h-10 rounded-xl bg-vialinks-purple flex items-center justify-center text-white shadow-lg shadow-vialinks-purple/20">
+               <BookOpen className="w-5 h-5" />
+             </div>
+             <h2 className="text-2xl font-black text-slate-900">{module.title}</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {module.lessons.map(lesson => (
+              <div 
+                key={lesson.id} 
+                className="group bg-white p-7 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:border-vialinks-purple/30 transition-all cursor-pointer relative overflow-hidden flex flex-col h-full"
+                onClick={() => setSelectedLesson(lesson)}
+              >
+                <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-[0.08] transition-all">
+                   <PlayCircle className="w-32 h-32 text-vialinks-purple" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[10px] font-black text-vialinks-purple uppercase tracking-widest mb-2">Aula Interativa</p>
+                  <h3 className="text-xl font-bold text-slate-900 mb-4 group-hover:text-vialinks-purple transition-colors">{lesson.title}</h3>
+                  <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
+                    <Package className="w-4 h-4" /> {lesson.slides.length} slides de conteúdo
+                  </div>
+                </div>
+                <div className="mt-8 flex justify-between items-center">
+                  <span className="text-xs font-bold text-slate-300 group-hover:text-vialinks-purple/50 transition-all uppercase tracking-widest">Iniciar Aula</span>
+                  <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-vialinks-purple group-hover:text-white transition-all shadow-sm">
+                    <ChevronRight className="w-5 h-5" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 };
