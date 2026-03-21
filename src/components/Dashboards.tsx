@@ -894,6 +894,8 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
             {activeTab === 'testimonial' && (hasActiveOrders || user.role === 'admin') && <TestimonialForm user={user} />}
             {activeTab === 'config' && <AccountSettings user={user} setView={setView} />}
             {activeTab === 'store' && <StoreTab user={user} setView={setView} onAddToCart={onAddToCart} />}
+            {activeTab === 'resale-plans' && <ResalePlans onAddToCart={onAddToCart} />}
+            {activeTab === 'reseller-clients' && <ResellerClientManagement reseller={user} />}
           </div>
         </div>
       </div>
@@ -1468,12 +1470,16 @@ const ResalePlans = ({ onAddToCart }: { onAddToCart: (item: any) => void }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, "plans"), where("active", "==", true), orderBy("order", "asc"));
+    const q = collection(db, "plans");
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const plansData = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter((p: any) => p.category === 'resale');
+        .filter((p: any) => p.active !== false && p.category === 'resale')
+        .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
       setPlans(plansData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching resale plans:", error);
       setLoading(false);
     });
     return () => unsubscribe();
