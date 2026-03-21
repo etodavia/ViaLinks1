@@ -582,12 +582,30 @@ const PaymentGate = ({ user, onPaid, setView }: { user: any; onPaid: () => void;
 export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCart, cartCount }: any) => {
 
   const [activeTab, setActiveTab] = useState('overview');
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [clients, setClients] = useState<any[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(user?.hasSeenOnboarding === false);
   const [hasActiveOrders, setHasActiveOrders] = useState(false);
   // Admins are always paid. For clients, use stored hasPaid or default to false (shows gate)
   const [hasPaid, setHasPaid] = useState<boolean>(
     user?.role === 'admin' ? true : (user?.hasPaid === true)
   );
+
+  useEffect(() => {
+    if (user.role !== 'reseller') return;
+    const q = query(collection(db, "users"), where("resellerId", "==", user.uid), where("role", "==", "client"));
+    return onSnapshot(q, (snap) => {
+      setClients(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+  }, [user.uid, user.role]);
+
+  const effectiveUser = (user.role === 'reseller' && selectedClientId) 
+    ? { ...clients.find(c => c.id === selectedClientId), role: 'client', isVirtual: true } 
+    : user;
+    
+  // If we found the client, use their data, otherwise fallback to reseller
+  const targetUser = (effectiveUser?.id || effectiveUser?.uid) ? effectiveUser : user;
+  if (targetUser && !targetUser.uid && targetUser.id) targetUser.uid = targetUser.id;
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -832,6 +850,22 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
               </p>
             </div>
             <div className="flex items-center gap-4">
+              {user.role === 'reseller' && (
+                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl">
+                  <User className="w-4 h-4 text-vialinks-purple" />
+                  <span className="text-xs font-bold text-slate-400 uppercase">Visualizando:</span>
+                  <select 
+                    className="bg-transparent text-sm font-bold text-slate-700 outline-none cursor-pointer"
+                    value={selectedClientId || ""}
+                    onChange={e => setSelectedClientId(e.target.value || null)}
+                  >
+                    <option value="">Minha Conta (Própria)</option>
+                    {clients.filter(c => c.hasPaid === true).map(c => (
+                      <option key={c.id} value={c.id}>{c.displayName || c.email}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <button 
                 onClick={onOpenCart}
                 className="flex items-center gap-2 bg-slate-100 text-slate-700 px-4 py-2 rounded-xl font-bold hover:bg-slate-200 transition-all relative"
@@ -856,6 +890,17 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
           <div className="max-w-4xl">
             {activeTab === 'overview' && (
               <div className="space-y-8">
+                {user.role === 'reseller' && selectedClientId && (
+                  <div className="p-4 bg-vialinks-purple/5 border border-vialinks-purple/10 rounded-2xl flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Users className="w-5 h-5 text-vialinks-purple" />
+                      <p className="text-sm font-medium text-slate-700">
+                        Você está visualizando o painel de <strong>{clients.find(c => c.id === selectedClientId)?.displayName}</strong>
+                      </p>
+                    </div>
+                    <button onClick={() => setSelectedClientId(null)} className="text-xs font-bold text-vialinks-purple hover:underline">Sair do Modo Cliente</button>
+                  </div>
+                )}
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100 shadow-sm">
                   <div className="w-12 h-12 rounded-2xl bg-vialinks-purple/10 flex items-center justify-center mb-6">
@@ -888,9 +933,9 @@ export const DashboardLayout = ({ user, setView, onLogout, onAddToCart, onOpenCa
             </div>
           )}
 
-            {activeTab === 'briefing' && <BriefingForm user={user} setView={setView} />}
-            {activeTab === 'orders' && <OrdersList user={user} />}
-            {activeTab === 'delivery' && <DeliverySection user={user} />}
+            {activeTab === 'briefing' && <BriefingForm user={targetUser} setView={setView} />}
+            {activeTab === 'orders' && <OrdersList user={targetUser} />}
+            {activeTab === 'delivery' && <DeliverySection user={targetUser} />}
             {activeTab === 'testimonial' && (hasActiveOrders || user.role === 'admin') && <TestimonialForm user={user} />}
             {activeTab === 'config' && <AccountSettings user={user} setView={setView} />}
             {activeTab === 'store' && <StoreTab user={user} setView={setView} onAddToCart={onAddToCart} />}
@@ -1121,18 +1166,21 @@ const OrdersList = ({ user }: any) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(
-      collection(db, "sales"), 
-      where("userId", "==", user.uid),
-      orderBy("createdAt", "desc")
-    );
-
+    // If it's a virtual user (client viewed by reseller), we fetch by targetClientId or direct userId
+    const q = collection(db, "sales");
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const ordersData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setOrders(ordersData);
+      const allSales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      const filtered = allSales.filter((s: any) => 
+        s.userId === user.uid || s.targetClientId === user.uid || (s.email === user.email && user.email)
+      ).sort((a: any, b: any) => {
+        const dateA = a.createdAt?.seconds || 0;
+        const dateB = b.createdAt?.seconds || 0;
+        return dateB - dateA;
+      });
+
+      setOrders(filtered);
       setLoading(false);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, "sales");
@@ -3953,16 +4001,16 @@ const BriefingForm = ({ user, setView }: { user: any, setView: (v: any) => void 
     const checkStatusAndLoad = async () => {
       try {
         // Check for purchases
-        const salesQuery = query(
-          collection(db, "sales"), 
-          where("userId", "==", user.uid)
-        );
-        const salesSnap = await getDocs(salesQuery);
+        // Check for purchases (Direct or via Reseller)
+        const salesByUserId = query(collection(db, "sales"), where("userId", "==", user.uid));
+        const salesByTarget = query(collection(db, "sales"), where("targetClientId", "==", user.uid));
         
-        if (!salesSnap.empty) {
+        const [snap1, snap2] = await Promise.all([getDocs(salesByUserId), getDocs(salesByTarget)]);
+        
+        if (!snap1.empty || !snap2.empty) {
           setHasPurchase(true);
-          // Check if any order is delivered
-          const delivered = salesSnap.docs.some(doc => doc.data().status === "delivered");
+          const allSales = [...snap1.docs, ...snap2.docs].map(d => d.data());
+          const delivered = allSales.some(s => s.status === "delivered");
           setIsDelivered(delivered);
         }
 
