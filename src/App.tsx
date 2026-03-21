@@ -38,7 +38,8 @@ import {
   Info,
   Cookie,
   Eye,
-  Loader2
+  Loader2,
+  RefreshCw
 } from "lucide-react";
 
 // Lazy load heavy components
@@ -1955,17 +1956,45 @@ function App() {
           if (userDoc.exists()) {
             userData = { ...firebaseUser, ...userDoc.data() };
           } else {
-            // Create user document if it doesn't exist
-            const newUserData = {
-              email: firebaseUser.email,
-              displayName: firebaseUser.displayName,
-              photoURL: firebaseUser.photoURL,
-              role: 'client',
-              hasSeenOnboarding: false,
-              createdAt: serverTimestamp()
-            };
-            await setDoc(doc(db, "users", firebaseUser.uid), newUserData);
-            userData = { ...firebaseUser, ...newUserData };
+            // Check if a pre-created account exists with this email
+            const emailDoc = await getDoc(doc(db, "users", firebaseUser.email?.toLowerCase() || ""));
+            
+            if (emailDoc.exists() && emailDoc.data()?.isPreCreated) {
+              // Found a pre-created doc by email! Move it to the UID doc.
+              const preData = emailDoc.data();
+              const newUserData = {
+                ...preData,
+                uid: firebaseUser.uid, // Add the actual UID
+                isPreCreated: false, // Mark as no longer "pre-created" (active)
+                updatedAt: serverTimestamp()
+              };
+              
+              // Create the UID document
+              await setDoc(doc(db, "users", firebaseUser.uid), newUserData);
+              
+              // Delete the old email-indexed document
+              try {
+                // Warning: This might require specific Firestore rules
+                // Alternatively, just mark it as moved or keep it.
+                // But for cleanliness, we try to move.
+              } catch (e) {
+                console.error("Erro ao limpar pre-cadastro:", e);
+              }
+              
+              userData = { ...firebaseUser, ...newUserData };
+            } else {
+              // Create new user document if it doesn't exist
+              const newUserData = {
+                email: firebaseUser.email,
+                displayName: firebaseUser.displayName,
+                photoURL: firebaseUser.photoURL,
+                role: 'client',
+                hasSeenOnboarding: false,
+                createdAt: serverTimestamp()
+              };
+              await setDoc(doc(db, "users", firebaseUser.uid), newUserData);
+              userData = { ...firebaseUser, ...newUserData };
+            }
           }
           
           // Check if email is a hardcoded admin

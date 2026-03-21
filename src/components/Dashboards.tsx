@@ -56,7 +56,9 @@ import {
   ShoppingCart,
   ArrowLeft,
   Lock,
-  Menu
+  Menu,
+  UserPlus,
+  RefreshCw
 } from "lucide-react";
 import { FirebaseImage } from "./FirebaseImage";
 import { auth, db, storage } from "../firebase";
@@ -1635,6 +1637,8 @@ export const AdminDashboard = ({ user, setView, onLogout, onOpenCart, cartCount 
   const [selectedBriefing, setSelectedBriefing] = useState<any>(null);
   const [chartData, setChartData] = useState<any[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isAddingUser, setIsAddingUser] = useState(false);
+  const [newUser, setNewUser] = useState({ email: "", name: "", role: "client", hasPaid: true });
 
   useEffect(() => {
     if (isAuthorized) {
@@ -1811,8 +1815,15 @@ export const AdminDashboard = ({ user, setView, onLogout, onOpenCart, cartCount 
         </button>
 
         <button 
+          onClick={() => { setActiveTab('users'); setIsAddingUser(true); setIsMobileMenuOpen(false); }}
+          className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 mt-4 border border-emerald-500/30"
+        >
+          <UserPlus className="w-5 h-5" /> Criar Nova Conta
+        </button>
+
+        <button 
           onClick={() => { setActiveTab('stats'); setIsMobileMenuOpen(false); }}
-          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'stats' ? 'bg-vialinks-orange/20 text-vialinks-orange' : 'text-white/60 hover:text-white hover:bg-white/5'} mt-8 border border-vialinks-orange/20`}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'stats' ? 'bg-vialinks-orange/20 text-vialinks-orange' : 'text-white/60 hover:text-white hover:bg-white/5'} mt-4 border border-vialinks-orange/20`}
         >
           <ShieldCheck className="w-5 h-5" /> Painel Admin
         </button>
@@ -1905,6 +1916,12 @@ export const AdminDashboard = ({ user, setView, onLogout, onOpenCart, cartCount 
               <p className="text-slate-500">Gerenciamento total da plataforma ViaLinks.</p>
             </div>
             <div className="flex items-center gap-4">
+              <button 
+                onClick={() => { setActiveTab('users'); setIsAddingUser(true); }}
+                className="hidden sm:flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20"
+              >
+                <UserPlus className="w-4 h-4" /> Criar Conta
+              </button>
               <button 
                 onClick={onOpenCart}
                 className="flex items-center gap-2 bg-slate-100 text-slate-700 px-4 py-2 rounded-xl font-bold hover:bg-slate-200 transition-all relative"
@@ -2212,91 +2229,170 @@ export const AdminDashboard = ({ user, setView, onLogout, onOpenCart, cartCount 
 
 
           {activeTab === 'users' && (
-            <div className="space-y-4">
-              {users.map((u: any) => (
-                <div key={u.id} className="p-6 rounded-2xl border border-slate-100 bg-slate-50 flex justify-between items-center">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-vialinks-purple/10 flex items-center justify-center text-vialinks-purple font-bold">
-                      {u.email[0].toUpperCase()}
+            <div className="space-y-6">
+              <div className="flex justify-between items-center bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Gestão de Usuários</h3>
+                  <p className="text-sm text-slate-500">Crie novos usuários ou altere permissões e acesso ao painel.</p>
+                </div>
+                <button 
+                  onClick={() => setIsAddingUser(!isAddingUser)}
+                  className="bg-vialinks-purple text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-vialinks-dark transition-all"
+                >
+                  <Plus className="w-5 h-5" /> {isAddingUser ? "Cancelar" : "Novo Usuário"}
+                </button>
+              </div>
+
+              {isAddingUser && (
+                <div className="bg-white p-8 rounded-3xl border-2 border-vialinks-purple/20 shadow-xl">
+                  <h4 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-2">
+                    <UserPlus className="w-5 h-5 text-vialinks-purple" /> Criar Novo Usuário
+                  </h4>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase">E-mail</label>
+                      <input 
+                        type="email" 
+                        value={newUser.email}
+                        onChange={e => setNewUser({ ...newUser, email: e.target.value })}
+                        placeholder="email@cliente.com"
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200"
+                      />
                     </div>
-                    <div>
-                      <p className="font-bold text-slate-900">{u.email}</p>
-                      <p className="text-sm text-slate-500">Papel: {u.role}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                          u.role === 'reseller' ? 'bg-vialinks-purple text-white' :
-                          u.hasPaid ? 'bg-green-100 text-green-700' : 
-                          u.awaitingVerification ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'
-                        }`}>
-                          {u.role === 'reseller' ? '★ Revendedor' : u.hasPaid ? '✓ Acesso Liberado' : u.awaitingVerification ? '⏳ Aguardando Verificação' : 'Sem Acesso'}
-                        </span>
-                        {u.purchaseEmail && u.purchaseEmail !== u.email && (
-                          <span className="text-[10px] text-slate-400">Email compra: {u.purchaseEmail}</span>
-                        )}
-                        {u.resellerName && (
-                          <span className="text-[10px] bg-vialinks-purple/10 text-vialinks-purple font-bold px-2 py-0.5 rounded-full border border-vialinks-purple/20">
-                            Revendedor: {u.resellerName}
-                          </span>
-                        )}
-                      </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase">Nome (Opcional)</label>
+                      <input 
+                        type="text" 
+                        value={newUser.name}
+                        onChange={e => setNewUser({ ...newUser, name: e.target.value })}
+                        placeholder="Nome do Cliente"
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase">Papel (Role)</label>
+                      <select 
+                        value={newUser.role}
+                        onChange={e => setNewUser({ ...newUser, role: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200"
+                      >
+                        <option value="client">Cliente Comum</option>
+                        <option value="reseller">Revendedor ★</option>
+                        <option value="admin">Administrador 🛡</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-2 py-3">
+                      <input 
+                        type="checkbox" 
+                        checked={newUser.hasPaid}
+                        onChange={e => setNewUser({ ...newUser, hasPaid: e.target.checked })}
+                        className="w-5 h-5 rounded accent-vialinks-purple"
+                      />
+                      <label className="text-sm font-bold text-slate-700">Liberar Painel Agora</label>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-[10px] text-slate-400 font-mono">UID: {u.id}</p>
-                    </div>
-                    {!u.hasPaid && (
-                      <button 
-                        onClick={async () => {
-                          if (confirm(`Liberar acesso ao painel para ${u.email}?`)) {
-                            await setDoc(doc(db, "users", u.id), { hasPaid: true }, { merge: true });
-                          }
-                        }}
-                        className="text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors"
-                      >
-                        Liberar Acesso
-                      </button>
-                    )}
-                    {u.hasPaid && (
-                      <button 
-                        onClick={async () => {
-                          if (confirm(`Revogar acesso de ${u.email}?`)) {
-                            await setDoc(doc(db, "users", u.id), { hasPaid: false }, { merge: true });
-                          }
-                        }}
-                        className="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors"
-                      >
-                        Revogar
-                      </button>
-                    )}
+                  <div className="mt-8 flex justify-end">
                     <button 
                       onClick={async () => {
-                        let newRole = 'client';
-                        if (u.role === 'client') newRole = 'reseller';
-                        else if (u.role === 'reseller') newRole = 'admin';
-                        else newRole = 'client';
-                        
-                        if (confirm(`Deseja alterar o papel de ${u.email} para ${newRole}?`)) {
-                          await setDoc(doc(db, "users", u.id), { role: newRole }, { merge: true });
+                        if (!newUser.email) return alert("E-mail é obrigatório.");
+                        try {
+                          const normalizedEmail = newUser.email.toLowerCase().trim();
+                          await setDoc(doc(db, "users", normalizedEmail), {
+                            email: normalizedEmail,
+                            displayName: newUser.name,
+                            role: newUser.role,
+                            hasPaid: newUser.hasPaid,
+                            isPreCreated: true,
+                            createdAt: serverTimestamp()
+                          });
+                          alert(`Usuário ${normalizedEmail} pré-cadastrado com sucesso!`);
+                          setIsAddingUser(false);
+                          setNewUser({ email: "", name: "", role: "client", hasPaid: true });
+                        } catch (e) {
+                          alert("Erro ao criar usuário.");
                         }
                       }}
-                      className="text-xs font-bold text-vialinks-purple hover:underline"
+                      className="bg-vialinks-purple text-white px-10 py-4 rounded-2xl font-black"
                     >
-                      Alterar Permissão ({u.role})
-                    </button>
-                    <button 
-                      onClick={async () => {
-                        if (confirm(`Deseja excluir o usuário ${u.email} permanentemente?`)) {
-                          await deleteDoc(doc(db, "users", u.id));
-                        }
-                      }}
-                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-5 h-5" />
+                      Confirmar Criação
                     </button>
                   </div>
                 </div>
-              ))}
+              )}
+
+              <div className="space-y-4">
+                {users.map((u: any) => (
+                  <div key={u.id} className="p-6 rounded-2xl border border-slate-100 bg-slate-50 flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-vialinks-purple/10 flex items-center justify-center text-vialinks-purple font-bold">
+                        {u.email?.[0]?.toUpperCase() || '?'}
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-900">{u.email}</p>
+                        <p className="text-sm text-slate-500">Papel: {u.role}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                            u.role === 'reseller' ? 'bg-vialinks-purple text-white' :
+                            u.hasPaid ? 'bg-green-100 text-green-700' : 
+                            u.awaitingVerification ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'
+                          }`}>
+                            {u.role === 'reseller' ? '★ Revendedor' : u.hasPaid ? '✓ Acesso Liberado' : u.awaitingVerification ? '⏳ Aguardando Verificação' : 'Sem Acesso'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      {!u.hasPaid && (
+                        <button 
+                          onClick={async () => {
+                            if (confirm(`Liberar acesso ao painel para ${u.email}?`)) {
+                              await setDoc(doc(db, "users", u.id), { hasPaid: true }, { merge: true });
+                            }
+                          }}
+                          className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg"
+                        >
+                          Liberar Acesso
+                        </button>
+                      )}
+                      {u.hasPaid && (
+                        <button 
+                          onClick={async () => {
+                            if (confirm(`Revogar acesso de ${u.email}?`)) {
+                              await setDoc(doc(db, "users", u.id), { hasPaid: false }, { merge: true });
+                            }
+                          }}
+                          className="text-xs font-bold text-red-500 bg-red-50 px-3 py-1.5 rounded-lg"
+                        >
+                          Revogar
+                        </button>
+                      )}
+                      <button 
+                        onClick={async () => {
+                          let newRole = 'client';
+                          if (u.role === 'client') newRole = 'reseller';
+                          else if (u.role === 'reseller') newRole = 'admin';
+                          if (confirm(`Alterar papel para ${newRole}?`)) {
+                            await setDoc(doc(db, "users", u.id), { role: newRole }, { merge: true });
+                          }
+                        }}
+                        className="text-xs font-bold text-vialinks-purple hover:underline"
+                      >
+                        Role ({u.role})
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          if (confirm(`Excluir ${u.email}?`)) {
+                            await deleteDoc(doc(db, "users", u.id));
+                          }
+                        }}
+                        className="p-2 text-slate-400 hover:text-red-500"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
