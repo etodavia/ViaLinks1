@@ -57,6 +57,38 @@ export default async function handler(req: any, res: any) {
     };
 
     const baseUrl = process.env.APP_URL || (req.headers.host ? `https://${req.headers.host}` : "");
+    
+    // Save record to sales collection as a lead (Backend uses admin privileges)
+    if (db) {
+      try {
+        let total = 0;
+        const lineItems = items.map((item: any) => {
+          const unitPrice = parsePrice(item.numericPrice || item.price);
+          total += unitPrice * (item.quantity || 1);
+          return {
+            id: item.id || "unspecified",
+            name: item.name,
+            quantity: item.quantity || 1,
+            numericPrice: unitPrice
+          };
+        });
+
+        await db.collection("sales").add({
+          email,
+          name: name || "",
+          phone: phone || "",
+          taxId: taxId || "",
+          amount: total,
+          items: lineItems,
+          status: "pending_payment",
+          type: "lead_redirect_api",
+          createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (saveErr) {
+        console.warn("[Admin] Failed to save pre-checkout lead:", saveErr);
+      }
+    }
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: items.map((item: any) => {

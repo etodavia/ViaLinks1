@@ -1532,37 +1532,13 @@ const CheckoutView = ({ cart, user, isProcessing, onCheckout, setView, content }
     setIntentError(null);
 
     try {
-      // 1. Save Lead/Abandoned Cart to Firestore
-      const saleRef = doc(collection(db, "sales"));
-      const saleData = {
-        userId: user?.uid || null,
-        email: formData.email,
-        name: formData.name,
-        phone: formData.phone,
-        taxId: formData.taxId,
-        address: {
-          zip: formData.zip,
-          street: formData.street,
-          number: formData.number,
-          neighborhood: formData.neighborhood,
-          city: formData.city,
-          state: formData.state
-        },
-        items: cart.map(item => ({
-          id: item.id,
-          name: item.name,
-          quantity: item.quantity,
-          numericPrice: item.numericPrice || item.price
-        })),
-        amount: total,
-        status: "pending_payment", // User is being redirected to Stripe
-        type: "lead_redirect",
-        createdAt: serverTimestamp()
-      };
-      
-      await setDoc(saleRef, saleData);
+      // 1. Save Lead/Abandoned Cart moved to backend to avoid Permission Denied on Frontend
+      const total = cart.reduce((acc, item) => {
+        const price = typeof item.numericPrice === 'number' ? item.numericPrice : (typeof item.price === 'number' ? item.price : parseFloat(String(item.price || '0').replace(/[^\d.,]/g, '').replace(',', '.'))) || 0;
+        return acc + (price * item.quantity);
+      }, 0);
 
-      // 2. Attempt to create Checkout Session via backend API
+      // 2. Attempt to create Checkout Session via backend API (Backend will handle saving to "sales")
       try {
         const response = await fetch('/api/create-checkout-session', {
           method: 'POST',
